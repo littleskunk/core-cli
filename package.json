@@ -34,7 +34,7 @@
     "node": "^4.4.4"
   },
   "dependencies": {
-    "storj-lib": "4.0.0",
+    "storj-lib": "littleskunk/core",
     "async": "^1.5.2",
     "colors": "^1.1.2",
     "commander": "^2.9.0",
