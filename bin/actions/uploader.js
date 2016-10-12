@@ -234,7 +234,7 @@ Uploader.prototype._createToken = function(filepath, callback) {
     self.client.createToken(self.bucket, 'PUSH', function(err, token) {
       if (err) {
 
-        if (retry < 6) {
+        if (retry < 999) {
           retry++;
           return _createToken();
         }
