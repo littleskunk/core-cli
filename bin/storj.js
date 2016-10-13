@@ -27,7 +27,10 @@ prompt.message = colors.bold.cyan(' [...]');
 prompt.delimiter = colors.cyan('  > ');
 program._storj = {};
 
-program.version(require('../package').version);
+program.version(
+  'Storjcli: ' + require('../package').version + ' | ' +
+  'Core: ' + storj.version.software
+);
 program.option('-u, --url <url>', 'set the base url for the api');
 program.option('-k, --keypass <password>', 'unlock keyring without prompt');
 program.option('-d, --debug', 'display debug data', 4);

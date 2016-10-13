@@ -9,6 +9,7 @@ var platform = os.platform();
 var tmp = require('tmp');
 var assert = require('assert');
 var rimraf = require('rimraf');
+tmp.setGracefulCleanup();
 
 var HOME = platform !== 'win32' ? process.env.HOME : process.env.USERPROFILE;
 var DATADIR = path.join(HOME, '.storjcli');

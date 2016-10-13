@@ -33,7 +33,12 @@ function Uploader(client, keypass, options) {
   this.fileConcurrency = options.env.fileconcurrency || 1;
   this.bucket = options.bucket;
   this.redundancy = options.env.redundancy || 0;
-  this.client = client({ transferConcurrency: this.shardConcurrency});
+  this.client = client(
+    {
+      transferConcurrency: this.shardConcurrency,
+      requestTimeout: 3000
+    }
+  );
   this.keypass = keypass();
   this.filepaths = this._getAllFiles(options.filepath);
   this.fileCount = this.filepaths.length;
@@ -204,6 +209,9 @@ Uploader.prototype._createReadStream = function(filepath, callback) {
   fs.createReadStream(filepath)
     .pipe(self.fileMeta[filepath].encrypter)
     .pipe(fs.createWriteStream(self.fileMeta[filepath].tmppath))
+    .on('error', function(err){
+      callback(err, filepath);
+    })
     .on('finish', function() {
       log(
         'info',
@@ -240,7 +248,6 @@ Uploader.prototype._createToken = function(filepath, callback) {
         }
 
         callback(err, filepath);
-        self._cleanup(filename, self.fileMeta[filepath].tmpCleanup);
         return;
       }
 
@@ -291,7 +298,7 @@ Uploader.prototype._storeFileInBucket = function(filepath, token, callback) {
       );
 
       if (self.redundancy && self.redundancy > 0) {
-        return self._mirror(file.id);
+        self._mirror(file.id);
       }
 
       self.uploadedCount++;
@@ -319,12 +326,6 @@ Uploader.prototype._storeFileInBucket = function(filepath, token, callback) {
  * @private
  */
 Uploader.prototype._mirror = function(fileid) {
-  log(
-    'info',
-    'Establishing %s mirrors per shard for redundancy',
-    [this.redundancy]
-  );
-
   this.client.replicateFileFromBucket(
     this.bucket,
     fileid,
@@ -335,9 +336,8 @@ Uploader.prototype._mirror = function(fileid) {
       }
 
       replicas.forEach(function(shard) {
-        log('info', 'Shard %s %s mirroring by %s nodes', [
+        log('info', 'Shard %s queued for mirroring by %s nodes', [
           shard.hash,
-          shard.status,
           shard.mirrors
         ]);
       });
