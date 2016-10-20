@@ -2,13 +2,7 @@
 var storj = require('storj-lib');
 var log = require('./../logger')().log;
 var utils = require('./../utils');
-var path = require('path');
 var fs = require('fs');
-var platform = require('os').platform();
-
-var HOME = platform !== 'win32' ? process.env.HOME : process.env.USERPROFILE;
-var DATADIR = path.join(HOME, '.storjcli');
-var KEYPATH = path.join(DATADIR, 'id_ecdsa');
 
 module.exports.getInfo =  function() {
   var client = this._storj.PublicClient();
@@ -46,9 +40,10 @@ module.exports.register = function() {
   });
 };
 
-module.exports.login = function(url) {
+module.exports.login = function() {
+  var self = this;
 
-  if (storj.utils.existsSync(KEYPATH)) {
+  if (storj.utils.existsSync(self._storj.keypath())) {
     return log('error', 'This device is already paired.');
   }
 
@@ -57,7 +52,7 @@ module.exports.login = function(url) {
       return log('error', err.message);
     }
 
-    var client = storj.BridgeClient(url, {
+    var client = storj.BridgeClient(self._storj.getURL(), {
       basicauth: result
     });
     var keypair = storj.KeyPair();
@@ -67,25 +62,26 @@ module.exports.login = function(url) {
         return log('error', err.message);
       }
 
-      fs.writeFileSync(KEYPATH, keypair.getPrivateKey());
+      fs.writeFileSync(self._storj.keypath(), keypair.getPrivateKey());
       log('info', 'This device has been successfully paired.');
     });
   });
 };
 
 module.exports.logout = function() {
+  var self = this;
   var client = this._storj.PrivateClient();
-  var keypair = utils.loadKeyPair();
+  var keypair = this._storj.loadKeyPair();
 
   client.destroyPublicKey(keypair.getPublicKey(), function(err) {
     if (err) {
       log('info', 'This device has been successfully unpaired.');
       log('warn', 'Failed to revoke key, you may need to do it manually.');
       log('warn', 'Reason: ' + err.message);
-      return fs.unlinkSync(KEYPATH);
+      return fs.unlinkSync(self._storj.keypath());
     }
 
-    fs.unlinkSync(KEYPATH);
+    fs.unlinkSync(self._storj.keypath());
     log('info', 'This device has been successfully unpaired.');
   });
 };

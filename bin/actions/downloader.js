@@ -70,21 +70,16 @@ Downloader.prototype._validate = function() {
 Downloader.prototype._getInfo = function(callback) {
   var self = this;
 
-  this.client.listFilesInBucket(this.bucket, function(err, files) {
+  this.client.getFileInfo(this.bucket, this.fileid, function(err, file) {
     if (err) {
       return callback(err);
     }
-
-    files.forEach(function(file) {
-      if (self.fileid === file.id) {
-        log(
-          'info',
-          'Name: %s, Type: %s, Size: %s bytes, ID: %s',
-          [file.filename, file.mimetype, file.size, file.id]
-        );
-        self.fileMeta = file;
-      }
-    });
+    log(   
+      'info',   
+      'Name: %s, Type: %s, Size: %s bytes, ID: %s',   
+      [file.filename, file.mimetype, file.size, file.id]    
+    );
+    self.fileMeta = file;
 
     return callback(null);
   });

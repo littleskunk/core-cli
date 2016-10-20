@@ -36,7 +36,7 @@ function Uploader(client, keypass, options) {
   this.client = client(
     {
       transferConcurrency: this.shardConcurrency,
-      requestTimeout: 3000
+      requestTimeout: 10000
     }
   );
   this.keypass = keypass();
@@ -166,11 +166,47 @@ Uploader.prototype._loopThroughFiles = function(callback) {
 };
 
 /**
+ * Calculates new name when file already exists in bucket
+ * @param {String} name - name of the duplicate file
+ * @returns {String}
+ * @private
+ */
+Uploader.prototype._calculateNewName = function(name){
+  var array = name.split('.');
+  var baseIndex = Math.max(array.length - 2, 0);
+  array[baseIndex] = array[baseIndex] + '-(' + Date.now() + ')';
+  return array.join('.');
+};
+
+/**
+ * check if a given file already exists in bucket
+ * @private
+ */
+Uploader.prototype._checkFileExistance = function(filepath, callback) {
+  var self = this;
+  var filename = path.basename(filepath);
+  var fileId = storj.utils.calculateFileId(self.bucket, filename);
+
+  self.client.getFileInfo(self.bucket, fileId, function(err, fileInfo){
+    if(fileInfo){
+      var newFilename = self._calculateNewName(filename);
+      log(
+        'warn',
+        '[ %s ] Already exists in bucket. Uploading to ' + newFilename,
+        filename
+       );
+      return callback(null, newFilename, filepath);
+    }
+    callback(null, filename, filepath);
+  });
+};
+
+/**
  * Create temp dir for storing encrypted versions of files to be uploaded.
  * @param {String} filepath - file to be uploaded
  * @private
  */
-Uploader.prototype._makeTempDir = function(filepath, callback) {
+Uploader.prototype._makeTempDir = function(filename, filepath, callback) {
   var self = this;
 
   utils.makeTempDir(function(err, tmpDir, tmpCleanup) {
@@ -183,7 +219,6 @@ Uploader.prototype._makeTempDir = function(filepath, callback) {
     log('info', 'Encrypting file "%s"', [filepath]);
 
     var secret = new storj.DataCipherKeyIv();
-    var filename = path.basename(filepath);
 
     self.fileMeta[filepath] = {
       filename: filename,
@@ -389,8 +424,11 @@ Uploader.prototype.start = function(finalCallback) {
     function _beginLoop(callback) {
       self._loopThroughFiles(callback);
     },
-    function _makeTempDir(filepath, callback) {
-      self._makeTempDir(filepath, callback);
+    function _checkFileExistance(filepath, callback) {
+      self._checkFileExistance(filepath, callback);
+    },
+    function _makeTempDir(filename, filepath, callback) {
+      self._makeTempDir(filename, filepath, callback);
     },
     function _createReadStream(filepath, callback) {
       self._createReadStream(filepath, callback);

@@ -79,15 +79,6 @@ module.exports.getCredentials = function(callback) {
   }, callback);
 };
 
-module.exports.loadKeyPair = function(){
-  if (!storj.utils.existsSync(KEYPATH)) {
-    log('error', 'You have not authenticated, please login.');
-    process.exit(1);
-  }
-
-  return storj.KeyPair(fs.readFileSync(KEYPATH).toString());
-};
-
 module.exports.getKeyRing = function(keypass, callback) {
   if (keypass) {
     var keyring;
