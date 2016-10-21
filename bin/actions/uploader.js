@@ -346,6 +346,7 @@ Uploader.prototype._storeFileInBucket = function(filepath, token, callback) {
 
       if (self.uploadedCount === self.fileCount) {
         log( 'info', 'Done.');
+        process.exit();
         callback(null, filepath);
       }
 
