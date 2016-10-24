@@ -36,17 +36,17 @@ program.option('-u, --url <url>', 'set the base url for the api');
 program.option('-k, --keypass <password>', 'unlock keyring without prompt');
 program.option('-d, --debug', 'display debug data', 4);
 
-program._storj.keypath = function() {
-  var keyfile = 'id_ecdsa_(' + url.parse(program._storj.getURL()).hostname + ')';
-  return path.join(DATADIR, keyfile);
-};
-
 program._storj.loglevel = function() {
   return program.debug || 3;
 };
 
 program._storj.getURL = function() {
   return program.url || process.env.STORJ_BRIDGE || 'https://api.storj.io';
+};
+
+program._storj.keypath = function() {
+  var keyfile = 'id_ecdsa_(' + url.parse(program._storj.getURL()).hostname +')';
+  return path.join(DATADIR, keyfile);
 };
 
 program._storj.PrivateClient = function(options) {

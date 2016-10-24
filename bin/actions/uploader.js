@@ -166,19 +166,6 @@ Uploader.prototype._loopThroughFiles = function(callback) {
 };
 
 /**
- * Calculates new name when file already exists in bucket
- * @param {String} name - name of the duplicate file
- * @returns {String}
- * @private
- */
-Uploader.prototype._calculateNewName = function(name){
-  var array = name.split('.');
-  var baseIndex = Math.max(array.length - 2, 0);
-  array[baseIndex] = array[baseIndex] + '-(' + Date.now() + ')';
-  return array.join('.');
-};
-
-/**
  * check if a given file already exists in bucket
  * @private
  */
@@ -189,7 +176,7 @@ Uploader.prototype._checkFileExistance = function(filepath, callback) {
 
   self.client.getFileInfo(self.bucket, fileId, function(err, fileInfo){
     if(fileInfo){
-      var newFilename = self._calculateNewName(filename);
+      var newFilename = '(' + new Date().toISOString() + ') ' + filename;
       log(
         'warn',
         '[ %s ] Already exists in bucket. Uploading to ' + newFilename,
@@ -371,10 +358,10 @@ Uploader.prototype._mirror = function(fileid) {
         return log('error', err.message);
       }
 
-      replicas.forEach(function(shard) {
-        log('info', 'Shard %s queued for mirroring by %s nodes', [
-          shard.hash,
-          shard.mirrors
+      replicas.forEach(function(shard, i) {
+        log('info', 'Shard %s establishing mirrors to %s nodes', [
+          i,
+          shard.length
         ]);
       });
 
