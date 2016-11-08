@@ -70,15 +70,8 @@ Downloader.prototype._validate = function() {
  * @private
  */
 Downloader.prototype._stripISOString = function(fileName){
-  var array = fileName.split(' ');
-  var potentialDate = array[0];
-  var re = /\(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z\)/g;
-  var isValid = potentialDate.match(re);
-  if (isValid){
-    return array.splice(1).join(' ');
-  } else {
-    return fileName
-  }
+  var re = /^\(\d{4}-\d{2}-\d{2}T\d{2};\d{2};\d{2}.\d{3}Z\)-/g;
+  return fileName.replace(re, '');
 };
 
 /**
@@ -92,10 +85,10 @@ Downloader.prototype._getInfo = function(callback) {
     if (err) {
       return callback(err);
     }
-    log(   
-      'info',   
-      'Name: %s, Type: %s, Size: %s bytes, ID: %s',   
-      [file.filename, file.mimetype, file.size, file.id]    
+    log(
+      'info',
+      'Name: %s, Type: %s, Size: %s bytes, ID: %s',
+      [file.filename, file.mimetype, file.size, file.id]
     );
     self.fileMeta = file;
     self.fileMeta.filename = self._stripISOString( file.filename );
@@ -241,10 +234,9 @@ Downloader.prototype.start = function(finalCallback) {
     }
   ], function (err, filepath) {
     if (err) {
-      var file = (self.destination) ? self.destination : self.filepath;
-      if (storj.utils.existsSync(file)) {
+      if (storj.utils.existsSync(self.destination) && self.destination) {
         log('info', 'Removing unfinished file: %s', self.destination);
-        fs.unlinkSync(file);
+        fs.unlinkSync(self.destination);
       }
     }
     finalCallback(err, filepath);

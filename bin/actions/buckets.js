@@ -26,6 +26,7 @@ module.exports.list = function() {
 
 module.exports.get = function(id) {
   var client = this._storj.PrivateClient();
+  id = this._storj.getRealBucketId(id);
 
   client.getBucketById(id, function(err, bucket) {
     if (err) {
@@ -42,6 +43,7 @@ module.exports.get = function(id) {
 
 module.exports.remove = function(id, env) {
   var client = this._storj.PrivateClient();
+  id = this._storj.getRealBucketId(id);
 
   function destroyBucket() {
     client.destroyBucketById(id, function(err) {
@@ -85,6 +87,7 @@ module.exports.add = function(name, storage, transfer) {
 
 module.exports.update = function(id, name, storage, transfer) {
   var client = this._storj.PrivateClient();
+  id = this._storj.getRealBucketId(id);
 
   client.updateBucketById(id, {
     name: name,
@@ -105,6 +108,7 @@ module.exports.update = function(id, name, storage, transfer) {
 
 module.exports.createtoken = function(bucket, operation) {
   var client = this._storj.PrivateClient();
+  bucket = this._storj.getRealBucketId(bucket);
 
   client.createToken(bucket, operation, function(err, token) {
     if (err) {

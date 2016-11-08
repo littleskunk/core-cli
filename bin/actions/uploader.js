@@ -29,7 +29,7 @@ function Uploader(client, keypass, options) {
 
   this.shardConcurrency = options.env.concurrency ?
                     parseInt(options.env.concurrency) :
-                    6;
+                    3;
   this.fileConcurrency = options.env.fileconcurrency || 1;
   this.bucket = options.bucket;
   this.redundancy = options.env.redundancy || 0;
@@ -176,7 +176,8 @@ Uploader.prototype._checkFileExistance = function(filepath, callback) {
 
   self.client.getFileInfo(self.bucket, fileId, function(err, fileInfo){
     if(fileInfo){
-      var newFilename = '(' + new Date().toISOString() + ') ' + filename;
+      var date = (new Date().toISOString()).replace(/:/g, ';');
+      var newFilename = '(' + date + ')-' + filename;
       log(
         'warn',
         '[ %s ] Already exists in bucket. Uploading to ' + newFilename,

@@ -8,6 +8,7 @@ var storj = require('storj-lib');
 
 module.exports.list = function(bucketid) {
   var client = this._storj.PrivateClient();
+  bucketid = this._storj.getRealBucketId(bucketid);
 
   client.listFilesInBucket(bucketid, function(err, files) {
     if (err) {
@@ -30,6 +31,8 @@ module.exports.list = function(bucketid) {
 
 module.exports.getInfo = function(bucketid, fileid) {
    var client = this._storj.PrivateClient();
+   bucketid = this._storj.getRealBucketId(bucketid);
+   fileid = this._storj.getRealFileId(bucketid, fileid);
 
   client.getFileInfo(bucketid, fileid, function(err, file) {
      if (err) {
@@ -47,6 +50,8 @@ module.exports.getInfo = function(bucketid, fileid) {
 module.exports.remove = function(id, fileId, env) {
   var client = this._storj.PrivateClient();
   var keypass = this._storj.getKeyPass();
+  id = this._storj.getRealBucketId(id);
+  fileid = this._storj.getRealFileId(id, fileid);
 
   function destroyFile() {
     utils.getKeyRing(keypass, function(keyring) {
@@ -73,6 +78,8 @@ module.exports.remove = function(id, fileId, env) {
 
 module.exports.mirror = function(bucket, file, env) {
   var client = this._storj.PrivateClient({ requestTimeout: 30000 });
+  bucket = this._storj.getRealBucketId(bucket);
+  file = this._storj.getRealFileId(bucket, file);
 
   if (parseInt(env.redundancy) > 12 || parseInt(env.redundancy) < 1) {
     return log('error', '%s is an invalid Redundancy value.', env.redundancy);
@@ -110,6 +117,8 @@ module.exports.stream = function(bucket, id, env) {
     logger: storj.deps.kad.Logger(0)
   });
   var keypass = this._storj.getKeyPass();
+  bucket = this._storj.getRealBucketId(bucket);
+  id = this._storj.getRealFileId(bucket, id);
 
   utils.getKeyRing(keypass, function(keyring) {
     var secret = keyring.get(id);
@@ -148,6 +157,8 @@ module.exports.stream = function(bucket, id, env) {
 
 module.exports.getpointers = function(bucket, id, env) {
   var client = this._storj.PrivateClient();
+  bucket = this._storj.getRealBucketId(bucket);
+  id = this._storj.getRealFileId(bucket, id);
 
   client.createToken(bucket, 'PULL', function(err, token) {
     if (err) {

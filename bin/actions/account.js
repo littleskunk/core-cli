@@ -53,7 +53,7 @@ module.exports.login = function() {
     }
 
     var client = storj.BridgeClient(self._storj.getURL(), {
-      basicauth: result
+      basicAuth: result
     });
     var keypair = storj.KeyPair();
 
@@ -62,6 +62,7 @@ module.exports.login = function() {
         return log('error', err.message);
       }
 
+      fs.writeFileSync(self._storj.idpath(), result.email);
       fs.writeFileSync(self._storj.keypath(), keypair.getPrivateKey());
       log('info', 'This device has been successfully paired.');
     });
@@ -74,13 +75,16 @@ module.exports.logout = function() {
   var keypair = this._storj.loadKeyPair();
 
   client.destroyPublicKey(keypair.getPublicKey(), function(err) {
+    if(storj.utils.existsSync(self._storj.idpath())){
+      fs.unlinkSync(self._storj.idpath());
+    }
+
     if (err) {
       log('info', 'This device has been successfully unpaired.');
       log('warn', 'Failed to revoke key, you may need to do it manually.');
       log('warn', 'Reason: ' + err.message);
       return fs.unlinkSync(self._storj.keypath());
     }
-
     fs.unlinkSync(self._storj.keypath());
     log('info', 'This device has been successfully unpaired.');
   });

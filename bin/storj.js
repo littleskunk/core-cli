@@ -33,6 +33,7 @@ program.version(
   'Core: ' + storj.version.software
 );
 program.option('-u, --url <url>', 'set the base url for the api');
+program.option('-n, --byname', 'treat ids as names');
 program.option('-k, --keypass <password>', 'unlock keyring without prompt');
 program.option('-d, --debug', 'display debug data', 4);
 
@@ -47,6 +48,11 @@ program._storj.getURL = function() {
 program._storj.keypath = function() {
   var keyfile = 'id_ecdsa_(' + url.parse(program._storj.getURL()).hostname +')';
   return path.join(DATADIR, keyfile);
+};
+
+program._storj.idpath = function() {
+  var idFile = 'id_user_(' + url.parse(program._storj.getURL()).hostname +')';
+  return path.join(DATADIR, idFile);
 };
 
 program._storj.PrivateClient = function(options) {
@@ -83,6 +89,34 @@ program._storj.loadKeyPair = function(){
   return storj.KeyPair(fs.readFileSync(program._storj.keypath()).toString());
 };
 
+/**
+  * Calculate real bucket id from either bucket name or id
+  * @param {String} bucketArg - Bucket name or bucket id
+  */
+program._storj.getRealBucketId = function(bucketArg){
+  if (!storj.utils.existsSync(program._storj.idpath())) {
+
+    return bucketArg;
+  }
+  var userId = fs.readFileSync(program._storj.idpath()).toString();
+  if(!bucketArg.match(/^[0-9a-f]{24}$/i) || program.byname){
+    return storj.utils.calculateBucketId(userId, bucketArg);
+  }
+  return bucketArg;
+};
+
+/**
+  * Calculate real file id from either file name or id
+  * @param {String} bucketId - Bucket id
+  * @param {String} fileArg - file name or file id
+  */
+program._storj.getRealFileId = function(bucketId, fileArg){
+  if(!fileArg.match(/^[0-9a-f]{24}$/i) || program.byname){
+    return storj.utils.calculateFileId(bucketId, fileArg);
+  }
+  return fileArg;
+};
+
 var ACTIONS = {
   fallthrough: function(command) {
     log(
@@ -93,6 +127,7 @@ var ACTIONS = {
     program.help();
   },
   upload: function(bucket, filepath, env) {
+    bucket = program._storj.getRealBucketId(bucket);
     var options = {
       bucket: bucket,
       filepath: filepath,
@@ -118,6 +153,8 @@ var ACTIONS = {
     });
   },
   download: function(bucket, id, filepath, env) {
+    bucket = program._storj.getRealBucketId(bucket);
+    id = program._storj.getRealFileId(bucket, id);
     var options = {
       bucket: bucket,
       fileid: id,
