@@ -175,17 +175,14 @@ Uploader.prototype._checkFileExistance = function(filepath, callback) {
   var fileId = storj.utils.calculateFileId(self.bucket, filename);
 
   self.client.getFileInfo(self.bucket, fileId, function(err, fileInfo){
-    if(fileInfo){
-      var date = (new Date().toISOString()).replace(/:/g, ';');
-      var newFilename = '(' + date + ')-' + filename;
-      log(
-        'warn',
-        '[ %s ] Already exists in bucket. Uploading to ' + newFilename,
-        filename
-       );
-      return callback(null, newFilename, filepath);
-    }
-    callback(null, filename, filepath);
+    var date = (new Date().toISOString()).replace(/:/g, ';');
+    var newFilename = '(' + date + ')-' + filename;
+    log(
+      'warn',
+      '[ %s ] Already exists in bucket. Uploading to ' + newFilename,
+      filename
+     );
+    return callback(null, newFilename, filepath);
   });
 };
 
