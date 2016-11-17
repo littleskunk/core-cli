@@ -165,26 +165,50 @@ Uploader.prototype._loopThroughFiles = function(callback) {
   );
 };
 
-/**
- * check if a given file already exists in bucket
- * @private
+/** 
+ * check if a given file already exists in bucket 
+ * @private 
  */
 Uploader.prototype._checkFileExistance = function(filepath, callback) {
   var self = this;
   var filename = path.basename(filepath);
   var fileId = storj.utils.calculateFileId(self.bucket, filename);
+  var retry = 0;
 
-  self.client.getFileInfo(self.bucket, fileId, function(err, fileInfo){
-    var date = (new Date().toISOString()).replace(/:/g, ';');
-    var newFilename = '(' + date + ')-' + filename;
+  function _getFileInfo() {
     log(
-      'warn',
-      '[ %s ] Already exists in bucket. Uploading to ' + newFilename,
-      filename
-     );
-    return callback(null, newFilename, filepath);
-  });
-};
+      'info',
+      '[ %s ] Getting file info... (retry: %s)',
+      [ filename, retry ]
+    );
+      
+    self.client.getFileInfo(self.bucket, fileId, function(err, fileInfo){
+      if (err) {
+        
+        if (retry < 6) {
+          retry++;
+          return _getFileInfo();
+        }
+        
+        return err;
+      }
+    
+      if(fileInfo){
+        var date = (new Date().toISOString()).replace(/:/g, ';');
+        var newFilename = '(' + date + ')-' + filename;
+        log(
+          'warn',
+          '[ %s ] Already exists in bucket. Uploading to ' + newFilename,
+          filename
+        );
+        return callback(null, newFilename, filepath);
+      }
+      return callback(null, filename, filepath);
+    });
+  }
+  
+  return _getFileInfo();
+}; 
 
 /**
  * Create temp dir for storing encrypted versions of files to be uploaded.
