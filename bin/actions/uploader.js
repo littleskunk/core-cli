@@ -184,7 +184,6 @@ Uploader.prototype._checkFileExistance = function(filepath, callback) {
       
     self.client.getFileInfo(self.bucket, fileId, function(err, fileInfo){
       if (err && err.message.indexOf('File not found') === -1 ) {
-        console.log('Error -%s-', err.message);
         
         if (retry < 6) {
           retry++;
