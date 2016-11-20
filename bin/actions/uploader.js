@@ -183,22 +183,43 @@ Uploader.prototype._checkFileExistence = function(filepath, callback) {
   var self = this;
   var filename = path.basename(filepath);
   var fileId = storj.utils.calculateFileId(self.bucket, filename);
+  var retry = 0;
 
-  self.client.getFileInfo(self.bucket, fileId, function(err, fileInfo){
-    if (fileInfo) {
-      var date = (new Date().toISOString()).replace(/:/g, ';');
-      var newFilename = '(' + date + ')-' + filename;
-      log(
-        'warn',
-        '[ %s ] Already exists in bucket. Uploading to ' + newFilename,
-        filename
-       );
-      self.filename = newFilename;
-      return callback(null, filepath);
-    }
-    self.filename = filename;
-    callback(null, filepath);
-  });
+  function _getFileInfo() {
+    log(
+      'info',
+      '[ %s ] Getting file info... (retry: %s)',
+      [ filename, retry ]
+    );
+
+    self.client.getFileInfo(self.bucket, fileId, function(err, fileInfo){
+      if (err && err.message.indexOf('File not found') === -1 ) {
+
+        if (retry < 6) {
+          retry++;
+          return _getFileInfo();
+        }
+
+        return err;
+      }
+
+      if(fileInfo){
+        var date = (new Date().toISOString()).replace(/:/g, ';');
+        var newFilename = '(' + date + ')-' + filename;
+        log(
+          'warn',
+          '[ %s ] Already exists in bucket. Uploading to ' + newFilename,
+          filename
+         );
+        self.filename = newFilename;
+        return callback(null, filepath);
+      }
+      self.filename = filename;
+      callback(null, filepath);
+    });
+  }
+
+  return _getFileInfo();
 };
 
 /**
