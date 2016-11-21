@@ -371,7 +371,7 @@ Uploader.prototype._mirror = function(fileid) {
       replicas.forEach(function(shard, i) {
         log('info', 'Shard %s establishing mirrors to %s nodes', [
           i,
-          shard.length
+          this.redundancy
         ]);
       });
 
