@@ -228,7 +228,7 @@ module.exports.getallpointers = function(bucket, env) {
 
           client.getFilePointers({
             bucket: bucket,
-            file: id,
+            file: file.id,
             token: token.token,
             skip: skip,
             limit: limit
