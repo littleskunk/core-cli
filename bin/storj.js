@@ -389,6 +389,12 @@ program
   .action(utils.verifyproof.bind(program));
 
 program
+  .command('test <bucket-id>')
+  .option('-c, --concurrency <count>', 'max pointer concurrency')
+  .description('get pointers metadata for all files in a bucket')
+  .action(actions.files.getallpointers.bind(program));
+
+program
   .command('*')
   .description('prints the usage information to the console')
   .action(ACTIONS.fallthrough);
