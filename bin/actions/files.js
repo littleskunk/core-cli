@@ -200,3 +200,52 @@ module.exports.getpointers = function(bucket, id, env) {
     });
   });
 };
+
+module.exports.getallpointers = function(bucket, env) {
+  var client = this._storj.PrivateClient();
+  bucket = this._storj.getRealBucketId(bucket);
+  
+  return log('info', 'Hack the planet');
+  
+  id = this._storj.getRealFileId(bucket, id);
+
+  client.createToken(bucket, 'PULL', function(err, token) {
+    if (err) {
+      return log('error', err.message);
+    }
+
+    var skip = Number(env.skip);
+    var limit = Number(env.limit);
+
+    client.getFilePointers({
+      bucket: bucket,
+      file: id,
+      token: token.token,
+      skip: skip,
+      limit: limit
+    }, function(err, pointers) {
+      if (err) {
+        return log('error', err.message);
+      }
+
+      if (!pointers.length) {
+        return log('warn', 'There are no pointers to return for that range');
+      }
+
+      log('info', 'Listing pointers for shards %s - %s', [
+        skip, skip + pointers.length - 1
+      ]);
+      log('info', '-----------------------------------------');
+      log('info', '');
+      pointers.forEach(function(location, i) {
+        log('info', 'Index:  %s', [skip + i]);
+        log('info', 'Hash:   %s', [location.hash]);
+        log('info', 'Token:  %s', [location.token]);
+        log('info', 'Farmer: %s', [
+          storj.utils.getContactURL(location.farmer)
+        ]);
+        log('info', '');
+      });
+    });
+  });
+};
