@@ -215,11 +215,6 @@ module.exports.getallpointers = function(bucket, env) {
     }
 
     files.forEach(function(file) {
-      log(
-        'info',
-        'Name: %s, Type: %s, Size: %s bytes, ID: %s',
-        [file.filename, file.mimetype, file.size, file.id]
-      );
       
       client.createToken(bucket, 'PULL', function(err, token) {
         if (!err) {
