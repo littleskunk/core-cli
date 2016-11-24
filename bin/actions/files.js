@@ -202,6 +202,7 @@ module.exports.getpointers = function(bucket, id, env) {
 };
 
 module.exports.getallpointers = function(bucket, env) {
+  var HOME = platform !== 'win32' ? process.env.HOME : process.env.USERPROFILE;
   var client = this._storj.PrivateClient();
   bucket = this._storj.getRealBucketId(bucket);
   
