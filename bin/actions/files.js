@@ -205,6 +205,11 @@ module.exports.getallpointers = function(bucket, env) {
   var client = this._storj.PrivateClient();
   bucket = this._storj.getRealBucketId(bucket);
   
+  return log('info', JSON.stringify(env));
+  var whitelist = new storj.Whitelist(env.blacklistFolder);
+  
+  return log('info', 'Hack the planet');
+  
   client.listFilesInBucket(bucket, function(err, files) {
     if (err) {
       return log('error', err.message);
@@ -245,9 +250,5 @@ module.exports.getallpointers = function(bucket, env) {
       });
     });
   });
-  
-  return log('info', 'Hack the planet');
-  
-  id = this._storj.getRealFileId(bucket, id);
 
 };
