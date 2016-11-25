@@ -220,11 +220,16 @@ module.exports.getallpointers = function(bucket, env) {
       return log('warn', 'There are no files in this bucket.');
     }
 
-    files.forEach(function(file) {
+    files.forEach(function(file, retry) {
       
       function _getFilePointers(file) {
         client.createToken(bucket, 'PULL', function(err, token) {
-          if (!err) {
+          if (err) {
+            if (retry < 6) {
+              retry += 1;
+              _getFilePointers(file, retry);
+            } else {
+            
             var skip = Number(env.skip);
             var limit = Number(env.limit);
 
@@ -235,8 +240,15 @@ module.exports.getallpointers = function(bucket, env) {
               skip: skip,
               limit: limit
             }, function(err, pointers) {
-              if (!err) {
-            
+              if (err) {
+                
+                if (retry < 6) {
+                  retry += 1;
+                  _getFilePointers(file, retry);
+                }
+                
+              else {
+                
                 if (!pointers.length) {
                   return log('warn', 'There are no pointers to return for that range');
                 }
@@ -246,7 +258,7 @@ module.exports.getallpointers = function(bucket, env) {
                   var counter = whitelist.getValue(location.farmer.nodeID)
                   log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
                   if ( counter < 10 ) {
-                    _getFilePointers(file);
+                    _getFilePointers(file, retry);
                   }
                 });
               }
@@ -255,7 +267,7 @@ module.exports.getallpointers = function(bucket, env) {
         });
       }
       
-      _getFilePointers(file);
+      _getFilePointers(file, 0);
     });
   });
 
