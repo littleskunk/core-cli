@@ -241,9 +241,7 @@ module.exports.getallpointers = function(bucket, env) {
               }
 
               pointers.forEach(function(location, i) {
-                log('info', 'Farmer: %s', [
-                  storj.utils.getContactURL(location.farmer)
-                ]);
+                log('info', 'Farmer: %s', location.farmer.nodeID);
               });
             }
           });
