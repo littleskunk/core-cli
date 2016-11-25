@@ -210,6 +210,7 @@ module.exports.getallpointers = function(bucket, env) {
   bucket = this._storj.getRealBucketId(bucket);
   
   var whitelist = new Whitelist(path.join(HOME, '.storjcli'));
+  whitelist.push('3d2422e7d1a2355208cb0fdabd6ff31ce2f9d469');
   return log('info', JSON.stringify(whitelist.toObject()));
   
   return log('info', 'Hack the planet');
