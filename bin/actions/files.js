@@ -261,7 +261,7 @@ module.exports.getallpointers = function(bucket, env) {
                   var counter = whitelist.getValue(location.farmer.nodeID)
                   log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
                   if ( counter < 10 ) {
-                    _getFilePointers(file, retry);
+                    _getFilePointers(file, 0);
                   }
                 });
               }
