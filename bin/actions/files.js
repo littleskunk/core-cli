@@ -5,6 +5,7 @@ var fs = require('fs');
 var path = require('path');
 var through = require('through');
 var storj = require('storj-lib');
+var Whitelist = require('storj-lib').Whitelist;
 
 module.exports.list = function(bucketid) {
   var client = this._storj.PrivateClient();
@@ -208,7 +209,7 @@ module.exports.getallpointers = function(bucket, env) {
   var client = this._storj.PrivateClient();
   bucket = this._storj.getRealBucketId(bucket);
   
-  var whitelist = new storj.Whitelist(path.join(HOME, '.storjcli'));
+  var whitelist = new Whitelist(path.join(HOME, '.storjcli'));
   return log('info', JSON.stringify(whitelist.toObject()));
   
   return log('info', 'Hack the planet');
