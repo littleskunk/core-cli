@@ -242,9 +242,9 @@ module.exports.getallpointers = function(bucket, env) {
                 }
 
                 pointers.forEach(function(location, i) {
-                  log('info', 'Farmer: %s', location.farmer.nodeID);
                   whitelist.push(location.farmer.nodeID);
-                  if ( whitelist.getValue() < 10 ) {
+                  log('info', 'Farmer: %s %s', location.farmer.nodeID, whitelist.getValue(location.farmer.nodeID));
+                  if ( whitelist.getValue(location.farmer.nodeID) < 10 ) {
                     _getFilePointers(file);
                   }
                 });
