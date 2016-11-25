@@ -241,7 +241,7 @@ module.exports.getallpointers = function(bucket, env) {
               }
 
               pointers.forEach(function(location, i) {
-                whitelist.push(farmer.nodeID);
+                whitelist.push(location.farmer.nodeID);
                 log('info', 'Farmer: %s', location.farmer.nodeID);
               });
             }
