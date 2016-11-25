@@ -247,7 +247,7 @@ module.exports.getallpointers = function(bucket, env) {
                   _getFilePointers(file, retry);
                 }
                 
-              else {
+              } else {
                 
                 if (!pointers.length) {
                   return log('warn', 'There are no pointers to return for that range');
