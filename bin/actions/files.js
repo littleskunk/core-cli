@@ -222,32 +222,39 @@ module.exports.getallpointers = function(bucket, env) {
 
     files.forEach(function(file) {
       
-      client.createToken(bucket, 'PULL', function(err, token) {
-        if (!err) {
-          var skip = Number(env.skip);
-          var limit = Number(env.limit);
+      function _getFilePointers(file) {
+        client.createToken(bucket, 'PULL', function(err, token) {
+          if (!err) {
+            var skip = Number(env.skip);
+            var limit = Number(env.limit);
 
-          client.getFilePointers({
-            bucket: bucket,
-            file: file.id,
-            token: token.token,
-            skip: skip,
-            limit: limit
-          }, function(err, pointers) {
-            if (!err) {
+            client.getFilePointers({
+              bucket: bucket,
+              file: file.id,
+              token: token.token,
+              skip: skip,
+              limit: limit
+            }, function(err, pointers) {
+              if (!err) {
             
-              if (!pointers.length) {
-                return log('warn', 'There are no pointers to return for that range');
-              }
+                if (!pointers.length) {
+                  return log('warn', 'There are no pointers to return for that range');
+                }
 
-              pointers.forEach(function(location, i) {
-                whitelist.push(location.farmer.nodeID);
-                log('info', 'Farmer: %s', location.farmer.nodeID);
-              });
-            }
-          });
-        }
-      });
+                pointers.forEach(function(location, i) {
+                  log('info', 'Farmer: %s', location.farmer.nodeID);
+                  whitelist.push(location.farmer.nodeID);
+                  if ( whitelist.getValue() < 10 ) {
+                    _getFilePointers(file);
+                  }
+                });
+              }
+            });
+          }
+        });
+      }
+      
+      _getFilePointers(file);
     });
   });
 
