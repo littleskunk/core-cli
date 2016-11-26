@@ -226,7 +226,7 @@ module.exports.getallpointers = function(bucket, env) {
         client.createToken(bucket, 'PULL', function(err, token) {
           if (err) {
             
-            if (retry < 6) {
+            if (retry < 100) {
               retry += 1;
               _getFilePointers(file, retry);
             }
@@ -245,7 +245,7 @@ module.exports.getallpointers = function(bucket, env) {
             }, function(err, pointers) {
               if (err) {
                 
-                if (retry < 6) {
+                if (retry < 100) {
                   retry += 1;
                   _getFilePointers(file, retry);
                 }
