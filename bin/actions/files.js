@@ -275,11 +275,6 @@ module.exports.getallpointers = function(bucket, env) {
       _getFilePointers(file, 0);
       _getFilePointers(file, 0);
       _getFilePointers(file, 0);
-      _getFilePointers(file, 0);
-      _getFilePointers(file, 0);
-      _getFilePointers(file, 0);
-      _getFilePointers(file, 0);
-      _getFilePointers(file, 0);
     });
   });
 
