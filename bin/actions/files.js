@@ -221,7 +221,7 @@ module.exports.getallpointers = function(bucket, env) {
       return log('warn', 'There are no files in this bucket.');
     }
 
-    async.forEachLimit(files, 1, function(file, retry) {
+    async.forEachLimit(files, 10, function(file, retry) {
 
       client.createToken(bucket, 'PULL', function(err, token) {
         if (err) {
