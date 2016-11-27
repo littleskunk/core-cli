@@ -261,6 +261,5 @@ module.exports.getallpointers = function(bucket, env) {
       });
     });
      
-    return log('info', 'Hack the Planet');
   });
 };
