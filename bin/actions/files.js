@@ -221,62 +221,45 @@ module.exports.getallpointers = function(bucket, env) {
     }
 
     files.forEach(function(file, retry) {
-      
-      function _getFilePointers(file) {
-        client.createToken(bucket, 'PULL', function(err, token) {
-          if (err) {
-            
-            if (retry < 100) {
-              retry += 1;
-              return _getFilePointers(file, retry);
-            }
-            
-            return log('warn', 'Create Token: %s', err.message);
-          } else {
-            
-            var skip = Number(env.skip);
-            var limit = Number(env.limit);
 
-            client.getFilePointers({
-              bucket: bucket,
-              file: file.id,
-              token: token.token,
-              skip: skip,
-              limit: limit
-            }, function(err, pointers) {
-              if (err) {
-                
-                if (retry < 100) {
-                  retry += 1;
-                  return _getFilePointers(file, retry);
+      client.createToken(bucket, 'PULL', function(err, token) {
+        if (err) {
+          return log('warn', 'Create Token: %s', err.message);
+        } else {
+            
+          var skip = Number(env.skip);
+          var limit = Number(env.limit);
+
+          client.getFilePointers({
+            bucket: bucket,
+            file: file.id,
+            token: token.token,
+            skip: skip,
+            limit: limit
+          }, function(err, pointers) {
+            if (err) {
+              return log('warn', 'Get Pointer: %s', err.message);
+            } else {
+
+              if (!pointers.length) {
+                return log('warn', 'There are no pointers to return for that range');
+              }
+
+              pointers.forEach(function(location, i) {
+                whitelist.push(location.farmer.nodeID);
+                var counter = whitelist.getValue(location.farmer.nodeID)
+                log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
+                if ( counter < 5000 ) {
+                  return _getFilePointers(file, 0);
+                } else {
+                  return log('warn', 'Limit reached: %s Count: %s', [location.farmer.nodeID, counter]);
                 }
-                
-                return log('warn', 'Get Pointer: %s', err.message);
-              } else {
-                
-                if (!pointers.length) {
-                  return log('warn', 'There are no pointers to return for that range');
-                }
-
-                pointers.forEach(function(location, i) {
-                  whitelist.push(location.farmer.nodeID);
-                  var counter = whitelist.getValue(location.farmer.nodeID)
-                  log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
-                  if ( counter < 5000 ) {
-                    return _getFilePointers(file, 0);
-                  } else {
-                    return log('warn', 'Limit reached: %s Count: %s', [location.farmer.nodeID, counter]);
-                  }
-                });
-              }
-            });
+              });
           }
-        });
+        });
       }
-      
-      _getFilePointers(file, 0);
-      return log('info', 'Hack the Planet');
-    });
+    });
+     
+    return log('info', 'Hack the Planet');
   });
-
 };
