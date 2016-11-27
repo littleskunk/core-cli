@@ -255,6 +255,7 @@ module.exports.getallpointers = function(bucket, env) {
                   return log('warn', 'Limit reached: %s Count: %s', [location.farmer.nodeID, counter]);
                 }
               });
+            }
           }
         });
       }
