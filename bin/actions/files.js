@@ -225,7 +225,7 @@ module.exports.getallpointers = function(bucket, env) {
 
       client.createToken(bucket, 'PULL', function(err, token) {
         if (err) {
-          return log('warn', 'Create Token: %s', err.message);
+          log('warn', 'Create Token: %s', err.message);
         } else {
             
           var skip = Number(env.skip);
@@ -239,20 +239,20 @@ module.exports.getallpointers = function(bucket, env) {
             limit: limit
           }, function(err, pointers) {
             if (err) {
-              return log('warn', 'Get Pointer: %s', err.message);
+              log('warn', 'Get Pointer: %s', err.message);
             } else {
 
               if (!pointers.length) {
-                return log('warn', 'There are no pointers to return for that range');
+                log('warn', 'There are no pointers to return for that range');
               }
 
               pointers.forEach(function(location, i) {
                 whitelist.push(location.farmer.nodeID);
                 var counter = whitelist.getValue(location.farmer.nodeID)
                 if ( counter < 5000 ) {
-                  return log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
+                  log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
                 } else {
-                  return log('warn', 'Limit reached: %s Count: %s', [location.farmer.nodeID, counter]);
+                  log('warn', 'Limit reached: %s Count: %s', [location.farmer.nodeID, counter]);
                 }
               });
             }
