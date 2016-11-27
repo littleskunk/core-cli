@@ -228,9 +228,10 @@ module.exports.getallpointers = function(bucket, env) {
             
             if (retry < 100) {
               retry += 1;
-              _getFilePointers(file, retry);
+              return _getFilePointers(file, retry);
             }
             
+            return log('warn', 'Create Token: %s', err.message);
           } else {
             
             var skip = Number(env.skip);
@@ -247,9 +248,10 @@ module.exports.getallpointers = function(bucket, env) {
                 
                 if (retry < 100) {
                   retry += 1;
-                  _getFilePointers(file, retry);
+                  return _getFilePointers(file, retry);
                 }
                 
+                return log('warn', 'Get Pointer: %s', err.message);
               } else {
                 
                 if (!pointers.length) {
@@ -261,7 +263,9 @@ module.exports.getallpointers = function(bucket, env) {
                   var counter = whitelist.getValue(location.farmer.nodeID)
                   log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
                   if ( counter < 5000 ) {
-                    _getFilePointers(file, 0);
+                    return _getFilePointers(file, 0);
+                  } else {
+                    return log('warn', 'Limit reached: %s Count: %s', [location.farmer.nodeID, counter]);
                   }
                 });
               }
@@ -275,6 +279,7 @@ module.exports.getallpointers = function(bucket, env) {
       _getFilePointers(file, 0);
       _getFilePointers(file, 0);
       _getFilePointers(file, 0);
+      return log('info', 'Hack the Planet');
     });
   });
 
