@@ -5,6 +5,7 @@ var fs = require('fs');
 var path = require('path');
 var through = require('through');
 var storj = require('storj-lib');
+var async = require('async');
 var Whitelist = require('storj-lib/lib/bridge-client/whitelist');
 
 module.exports.list = function(bucketid) {
