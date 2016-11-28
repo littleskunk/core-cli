@@ -215,10 +215,10 @@ module.exports.getpointers = function(bucket, id, env) {
 module.exports.getallpointers = function(bucket, env) {
   var client = this._storj.PrivateClient();
   
-  var files = JSON.parse(fs.readFileSync(path.join(HOME, '.storjcli/.files')));
+  var filelist = JSON.parse(fs.readFileSync(path.join(HOME, '.storjcli/.files')));
   var whitelist = new Whitelist(path.join(HOME, '.storjcli'));
   
-  async.forEach(files, function(file) {
+  async.forEach(filelist, function(file) {
 
     client.createToken(file.bucket, 'PULL', function(err, token) {
       if (err) {
@@ -250,7 +250,8 @@ module.exports.getallpointers = function(bucket, env) {
                 log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
               } else {
                 log('warn', 'Limit reached: %s Count: %s', [location.farmer.nodeID, counter]);
-                delete files[file.id];
+                delete filelist[file.id];
+                fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
               }
             });
           }
