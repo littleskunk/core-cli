@@ -221,48 +221,53 @@ module.exports.getallpointers = function(bucket, env) {
   var whitelist = new Whitelist(path.join(HOME, '.storjcli'));
     
   async.forEachLimit(filelist, 500, function(file, callback) {
+    
+    if ( file.download >= 5000 || file.error >= 10 ) {
+      return callback(null);
+    }
+    
     client.createToken(file.bucket, 'PULL', function(err, token) {
+      
       if (err) {
         log('warn', 'Create Token: %s', err.message);
         filelist[file.id]['error'] += 1;
         fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
-        callback(null);
-      } else {
-            
-        var skip = Number(env.skip);
-        var limit = Number(env.limit);
-
-        client.getFilePointers({
-          bucket: file.bucket,
-          file: file.id,
-          token: token.token,
-          skip: skip,
-          limit: limit
-        }, function(err, pointers) {
-          if (err) {
-            log('warn', 'Get Pointer: %s', err.message);
-            filelist[file.id]['error'] += 1;
-            fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
-            callback(null);
-          } else {
-
-            if (!pointers.length) {
-              log('warn', 'There are no pointers to return for that range');
-              callback(null);
-            }
-
-            pointers.forEach(function(location, i) {
-              whitelist.push(location.farmer.nodeID);
-              var counter = whitelist.getValue(location.farmer.nodeID)
-              filelist[file.id]['error'] = 0;
-              filelist[file.id]['download'] = counter;
-              fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
-              log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
-            });
-            callback(null);
-          }
-        });
+        return callback(null);
       }
+            
+      var skip = Number(env.skip);
+      var limit = Number(env.limit);
+
+      client.getFilePointers({
+        bucket: file.bucket,
+        file: file.id,
+        token: token.token,
+        skip: skip,
+        limit: limit
+      }, function(err, pointers) {
+        if (err) {
+          log('warn', 'Get Pointer: %s', err.message);
+          filelist[file.id]['error'] += 1;
+          fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
+          return callback(null);
+        }
+        
+        if (!pointers.length) {
+          log('warn', 'There are no pointers to return for that range');
+          return callback(null);
+        }
+        
+        pointers.forEach(function(location, i) {
+          whitelist.push(location.farmer.nodeID);
+          var counter = whitelist.getValue(location.farmer.nodeID)
+          filelist[file.id]['error'] = 0;
+          filelist[file.id]['download'] = counter;
+          fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
+          log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
+        });
+        
+        return callback(null);
+      });
     });
   });
 };
