@@ -12,7 +12,7 @@ var platform = os.platform();
 var HOME = platform !== 'win32' ? process.env.HOME : process.env.USERPROFILE;
 
 module.exports.list = function(bucketid) {
-  var list = JSON.parse(fs.readFileSync(path.join(HOME, '.storjcli/.files')));
+  var filelist = JSON.parse(fs.readFileSync(path.join(HOME, '.storjcli/.files')));
   var client = this._storj.PrivateClient();
   bucketid = this._storj.getRealBucketId(bucketid);
 
@@ -31,10 +31,12 @@ module.exports.list = function(bucketid) {
         'Name: %s, Type: %s, Size: %s bytes, ID: %s',
         [file.filename, file.mimetype, file.size, file.id]
       );
-      list[file.id] = bucketid;
+      filelist[file.filename] = {};
+      filelist[file.filename]['id'] = file.id;
+      filelist[file.filename]['bucket'] = bucket;
     });
     
-    fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(list, null, "\t"));
+    fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
   });
 };
 
@@ -211,63 +213,48 @@ module.exports.getpointers = function(bucket, id, env) {
 };
 
 module.exports.getallpointers = function(bucket, env) {
-  var os = require('os');
-  var platform = os.platform();
-  var HOME = platform !== 'win32' ? process.env.HOME : process.env.USERPROFILE;
   var client = this._storj.PrivateClient();
-  bucket = this._storj.getRealBucketId(bucket);
   
-  var list = JSON.parse(fs.readFileSync(path.join(HOME, '.storjcli/.files')));
+  var files = JSON.parse(fs.readFileSync(path.join(HOME, '.storjcli/.files')));
   var whitelist = new Whitelist(path.join(HOME, '.storjcli'));
   
-  client.listFilesInBucket(bucket, function(err, files) {
-    if (err) {
-      return log('error', err.message);
-    }
+  async.forEachLimit(files, 10, function(file) {
 
-    if (!files.length) {
-      return log('warn', 'There are no files in this bucket.');
-    }
-
-    async.forEachLimit(files, 10, function(file) {
-
-      client.createToken(bucket, 'PULL', function(err, token) {
-        if (err) {
-          log('warn', 'Create Token: %s', err.message);
-        } else {
+    client.createToken(file.bucket, 'PULL', function(err, token) {
+      if (err) {
+        log('warn', 'Create Token: %s', err.message);
+      } else {
             
-          var skip = Number(env.skip);
-          var limit = Number(env.limit);
+        var skip = Number(env.skip);
+        var limit = Number(env.limit);
 
-          client.getFilePointers({
-            bucket: bucket,
-            file: file.id,
-            token: token.token,
-            skip: skip,
-            limit: limit
-          }, function(err, pointers) {
-            if (err) {
-              log('warn', 'Get Pointer: %s', err.message);
-            } else {
+        client.getFilePointers({
+          bucket: file.bucket,
+          file: file.id,
+          token: token.token,
+          skip: skip,
+          limit: limit
+        }, function(err, pointers) {
+          if (err) {
+            log('warn', 'Get Pointer: %s', err.message);
+          } else {
 
-              if (!pointers.length) {
-                log('warn', 'There are no pointers to return for that range');
-              }
+            if (!pointers.length) {
+              log('warn', 'There are no pointers to return for that range');
+            }
 
-              pointers.forEach(function(location, i) {
-                whitelist.push(location.farmer.nodeID);
-                var counter = whitelist.getValue(location.farmer.nodeID)
-                if ( counter < 5000 ) {
-                  log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
-                } else {
-                  log('warn', 'Limit reached: %s Count: %s', [location.farmer.nodeID, counter]);
-                }
-              });
-            }
-          });
-        }
-      });
-    });
-     
-  });
+            pointers.forEach(function(location, i) {
+              whitelist.push(location.farmer.nodeID);
+              var counter = whitelist.getValue(location.farmer.nodeID)
+              if ( counter < 5000 ) {
+                log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
+              } else {
+                log('warn', 'Limit reached: %s Count: %s', [location.farmer.nodeID, counter]);
+              }
+            });
+          }
+        });
+      }
+    });
+  });
 };
