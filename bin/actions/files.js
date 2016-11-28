@@ -34,6 +34,8 @@ module.exports.list = function(bucketid) {
       filelist[file.id] = {};
       filelist[file.id]['id'] = file.id;
       filelist[file.id]['bucket'] = bucketid;
+      filelist[file.id]['download'] = 0;
+      filelist[file.id]['error'] = 0;
     });
     
     fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
@@ -222,6 +224,7 @@ module.exports.getallpointers = function(bucket, env) {
     client.createToken(file.bucket, 'PULL', function(err, token) {
       if (err) {
         log('warn', 'Create Token: %s', err.message);
+        filelist[file.id]['error'] += 1;
         callback(null);
       } else {
             
@@ -237,6 +240,7 @@ module.exports.getallpointers = function(bucket, env) {
         }, function(err, pointers) {
           if (err) {
             log('warn', 'Get Pointer: %s', err.message);
+            filelist[file.id]['error'] += 1;
             callback(null);
           } else {
 
@@ -248,23 +252,15 @@ module.exports.getallpointers = function(bucket, env) {
             pointers.forEach(function(location, i) {
               whitelist.push(location.farmer.nodeID);
               var counter = whitelist.getValue(location.farmer.nodeID)
-              if ( counter < 5000 ) {
-                log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
-              } else {
-                log('warn', 'Limit reached: %s Count: %s', [location.farmer.nodeID, counter]);
-                delete filelist[file.id];
-                fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
-              }
+              filelist[file.id]['error'] = 0;
+              filelist[file.id]['download'] = counter;
+              log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
             });
-            
             callback(null);
           }
         });
       }
     });
-  }, function(err) {
-    if (err) {
-      log('error', 'Error');
-    }
   });
+  fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
 };
