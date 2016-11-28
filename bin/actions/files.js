@@ -12,7 +12,7 @@ var platform = os.platform();
 var HOME = platform !== 'win32' ? process.env.HOME : process.env.USERPROFILE;
 
 module.exports.list = function(bucketid) {
-  var list = {}
+  var list = JSON.parse(fs.readFileSync(path.join(HOME, '.storjcli/.files')));
   var whitelist = new Whitelist(path.join(HOME, '.storjcli'));
   var client = this._storj.PrivateClient();
   bucketid = this._storj.getRealBucketId(bucketid);
@@ -37,7 +37,7 @@ module.exports.list = function(bucketid) {
       list[file.filename]['bucketID'] = bucketid;
     });
     
-    fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(list));
+    fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(list, null, "\t"));
   });
 };
 
