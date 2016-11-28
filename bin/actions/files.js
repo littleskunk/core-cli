@@ -13,7 +13,6 @@ var HOME = platform !== 'win32' ? process.env.HOME : process.env.USERPROFILE;
 
 module.exports.list = function(bucketid) {
   var list = JSON.parse(fs.readFileSync(path.join(HOME, '.storjcli/.files')));
-  var whitelist = new Whitelist(path.join(HOME, '.storjcli'));
   var client = this._storj.PrivateClient();
   bucketid = this._storj.getRealBucketId(bucketid);
 
@@ -218,6 +217,7 @@ module.exports.getallpointers = function(bucket, env) {
   var client = this._storj.PrivateClient();
   bucket = this._storj.getRealBucketId(bucket);
   
+  var list = JSON.parse(fs.readFileSync(path.join(HOME, '.storjcli/.files')));
   var whitelist = new Whitelist(path.join(HOME, '.storjcli'));
   
   client.listFilesInBucket(bucket, function(err, files) {
