@@ -236,6 +236,7 @@ module.exports.getallpointers = function(bucket, env) {
         }, function(err, pointers) {
           if (err) {
             log('warn', 'Get Pointer: %s', err.message);
+            callback(null);
           } else {
 
             if (!pointers.length) {
