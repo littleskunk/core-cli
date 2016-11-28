@@ -33,7 +33,7 @@ module.exports.list = function(bucketid) {
       );
       filelist[file.filename] = {};
       filelist[file.filename]['id'] = file.id;
-      filelist[file.filename]['bucket'] = bucket;
+      filelist[file.filename]['bucket'] = bucketid;
     });
     
     fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
