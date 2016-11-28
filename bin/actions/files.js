@@ -218,11 +218,10 @@ module.exports.getallpointers = function(bucket, env) {
   var filelist = JSON.parse(fs.readFileSync(path.join(HOME, '.storjcli/.files')));
   var whitelist = new Whitelist(path.join(HOME, '.storjcli'));
     
-  function _createToken(file) {
+  async.forEachLimit(filelist, 2, function(file, callback) {
     client.createToken(file.bucket, 'PULL', function(err, token) {
       if (err) {
         log('warn', 'Create Token: %s', err.message);
-        callback();
       } else {
             
         var skip = Number(env.skip);
@@ -237,12 +236,10 @@ module.exports.getallpointers = function(bucket, env) {
         }, function(err, pointers) {
           if (err) {
             log('warn', 'Get Pointer: %s', err.message);
-            callback();
           } else {
 
             if (!pointers.length) {
               log('warn', 'There are no pointers to return for that range');
-              callback();
             }
 
             pointers.forEach(function(location, i) {
@@ -250,17 +247,15 @@ module.exports.getallpointers = function(bucket, env) {
               var counter = whitelist.getValue(location.farmer.nodeID)
               if ( counter < 5000 ) {
                 log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
-                callback();
               } else {
                 log('warn', 'Limit reached: %s Count: %s', [location.farmer.nodeID, counter]);
                 delete filelist[file.id];
                 fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
-                callback();
               }
             });
           }
         });
       }
     });
-  }
+  });
 };
