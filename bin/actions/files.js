@@ -257,5 +257,9 @@ module.exports.getallpointers = function(bucket, env) {
         });
       }
     });
+  }, function(err) {
+    if (err) {
+      log('error', 'Error');
+    }
   });
 };
