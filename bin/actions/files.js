@@ -217,9 +217,8 @@ module.exports.getallpointers = function(bucket, env) {
   
   var filelist = JSON.parse(fs.readFileSync(path.join(HOME, '.storjcli/.files')));
   var whitelist = new Whitelist(path.join(HOME, '.storjcli'));
-  
-  async.forEachLimit(filelist, 100, function(file, callback) {
-
+    
+  function _createToken(file) {
     client.createToken(file.bucket, 'PULL', function(err, token) {
       if (err) {
         log('warn', 'Create Token: %s', err.message);
@@ -263,5 +262,5 @@ module.exports.getallpointers = function(bucket, env) {
         });
       }
     });
-  });
+  }
 };
