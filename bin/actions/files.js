@@ -276,7 +276,7 @@ module.exports.getallpointers = function(bucket, env) {
         return callback(null);
       });
     });
+  }, function(err) {
+    log('info', 'Downloads: %s Errors: %s', [download,error]);
   });
-  
-  log('info', 'Downloads: %s Errors: %s', [download,error]);
 };
