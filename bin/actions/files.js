@@ -222,6 +222,7 @@ module.exports.getallpointers = function(bucket, env) {
     client.createToken(file.bucket, 'PULL', function(err, token) {
       if (err) {
         log('warn', 'Create Token: %s', err.message);
+        callback(null);
       } else {
             
         var skip = Number(env.skip);
@@ -241,6 +242,7 @@ module.exports.getallpointers = function(bucket, env) {
 
             if (!pointers.length) {
               log('warn', 'There are no pointers to return for that range');
+              callback(null);
             }
 
             pointers.forEach(function(location, i) {
@@ -254,6 +256,8 @@ module.exports.getallpointers = function(bucket, env) {
                 fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
               }
             });
+            
+            callback(null);
           }
         });
       }
