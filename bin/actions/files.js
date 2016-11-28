@@ -7,8 +7,13 @@ var through = require('through');
 var storj = require('storj-lib');
 var async = require('async');
 var Whitelist = require('storj-lib/lib/bridge-client/whitelist');
+var os = require('os');
+var platform = os.platform();
+var HOME = platform !== 'win32' ? process.env.HOME : process.env.USERPROFILE;
 
 module.exports.list = function(bucketid) {
+  var list = {}
+  var whitelist = new Whitelist(path.join(HOME, '.storjcli'));
   var client = this._storj.PrivateClient();
   bucketid = this._storj.getRealBucketId(bucketid);
 
@@ -27,7 +32,11 @@ module.exports.list = function(bucketid) {
         'Name: %s, Type: %s, Size: %s bytes, ID: %s',
         [file.filename, file.mimetype, file.size, file.id]
       );
+      list[file.filename]['ID'] = file.id;
+      list[file.filename]['bucketID'] = bucketid;
     });
+    
+    fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(list));
   });
 };
 
