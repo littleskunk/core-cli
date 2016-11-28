@@ -215,6 +215,7 @@ module.exports.getpointers = function(bucket, id, env) {
 };
 
 module.exports.getallpointers = function(bucket, env) {
+  var start = date.now();
   var client = this._storj.PrivateClient();
   
   var filelist = JSON.parse(fs.readFileSync(path.join(HOME, '.storjcli/.files')));
@@ -277,6 +278,6 @@ module.exports.getallpointers = function(bucket, env) {
       });
     });
   }, function(err) {
-    log('info', 'Downloads: %s Errors: %s', [download,error]);
+    log('info', 'Downloads: %s Errors: %s Zeit: %s', [download, error, date.now() - start]);
   });
 };
