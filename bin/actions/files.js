@@ -225,6 +225,7 @@ module.exports.getallpointers = function(bucket, env) {
       if (err) {
         log('warn', 'Create Token: %s', err.message);
         filelist[file.id]['error'] += 1;
+        fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
         callback(null);
       } else {
             
@@ -241,6 +242,7 @@ module.exports.getallpointers = function(bucket, env) {
           if (err) {
             log('warn', 'Get Pointer: %s', err.message);
             filelist[file.id]['error'] += 1;
+            fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
             callback(null);
           } else {
 
@@ -254,6 +256,7 @@ module.exports.getallpointers = function(bucket, env) {
               var counter = whitelist.getValue(location.farmer.nodeID)
               filelist[file.id]['error'] = 0;
               filelist[file.id]['download'] = counter;
+              fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
               log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
             });
             callback(null);
@@ -262,5 +265,4 @@ module.exports.getallpointers = function(bucket, env) {
       }
     });
   });
-  fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
 };
