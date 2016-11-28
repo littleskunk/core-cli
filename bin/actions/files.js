@@ -31,9 +31,9 @@ module.exports.list = function(bucketid) {
         'Name: %s, Type: %s, Size: %s bytes, ID: %s',
         [file.filename, file.mimetype, file.size, file.id]
       );
-      filelist[file.filename] = {};
-      filelist[file.filename]['id'] = file.id;
-      filelist[file.filename]['bucket'] = bucketid;
+      filelist[file.id] = {};
+      filelist[file.id]['id'] = file.id;
+      filelist[file.id]['bucket'] = bucketid;
     });
     
     fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
@@ -218,7 +218,7 @@ module.exports.getallpointers = function(bucket, env) {
   var files = JSON.parse(fs.readFileSync(path.join(HOME, '.storjcli/.files')));
   var whitelist = new Whitelist(path.join(HOME, '.storjcli'));
   
-  async.forEachLimit(files, 10, function(file) {
+  files.forEach(function(file) {
 
     client.createToken(file.bucket, 'PULL', function(err, token) {
       if (err) {
@@ -250,6 +250,7 @@ module.exports.getallpointers = function(bucket, env) {
                 log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
               } else {
                 log('warn', 'Limit reached: %s Count: %s', [location.farmer.nodeID, counter]);
+                delete files[file.id];
               }
             });
           }
