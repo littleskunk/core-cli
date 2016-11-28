@@ -218,7 +218,7 @@ module.exports.getallpointers = function(bucket, env) {
   var files = JSON.parse(fs.readFileSync(path.join(HOME, '.storjcli/.files')));
   var whitelist = new Whitelist(path.join(HOME, '.storjcli'));
   
-  files.forEach(function(file) {
+  async.forEach(files, function(file) {
 
     client.createToken(file.bucket, 'PULL', function(err, token) {
       if (err) {
