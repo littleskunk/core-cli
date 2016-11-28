@@ -224,7 +224,7 @@ module.exports.getallpointers = function(bucket, env) {
   var error = 0;
   var download = 0;
     
-  async.forEachLimit(filelist, 300, function(file, callback) {
+  async.forEachLimit(filelist, 200, function(file, callback) {
     
     if ( file.download >= 5000 || file.error >= 10 ) {
       return callback(null);
