@@ -32,6 +32,7 @@ module.exports.list = function(bucketid) {
         'Name: %s, Type: %s, Size: %s bytes, ID: %s',
         [file.filename, file.mimetype, file.size, file.id]
       );
+      list[file.filename] = {};
       list[file.filename]['ID'] = file.id;
       list[file.filename]['bucketID'] = bucketid;
     });
