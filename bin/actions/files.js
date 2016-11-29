@@ -226,7 +226,7 @@ module.exports.getallpointers = function(bucket, env) {
     
   async.forEachLimit(filelist, 200, function(file, callback) {
     
-    if ( file.download >= 5000 || file.error >= 10 ) {
+    if ( file.download >= 5000 || file.error >= 20 ) {
       if ( file.download === 0 ) {
         delete filelist[file.id];
         fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
@@ -274,6 +274,7 @@ module.exports.getallpointers = function(bucket, env) {
           download += 1;
           filelist[file.id]['error'] = 0;
           filelist[file.id]['download'] = counter;
+          filelist[file.id]['farmer'] = location.farmer;
           fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
           log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
         });
