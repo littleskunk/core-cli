@@ -227,7 +227,7 @@ module.exports.getallpointers = function(bucket, env) {
   async.forEachLimit(filelist, 200, function(file, callback) {
     
     if ( file.download >= 5000 || file.error >= 10 ) {
-      if ( file.download === 0 ) {
+      if ( file.download === 0 || file.download >= 5000 ) {
         delete filelist[file.id];
         fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
       }
