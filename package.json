@@ -34,7 +34,7 @@
     "node": "^6.9.1"
   },
   "dependencies": {
-    "storj-lib": "^5.1.0",
+    "storj-lib": "littleskunk/core#timeout",
     "async": "^1.5.2",
     "colors": "^1.1.2",
     "commander": "^2.9.0",
