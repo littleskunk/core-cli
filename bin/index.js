@@ -15,3 +15,5 @@ module.exports.keys = require('./actions/keys');
 module.exports.Uploader = require('./actions/uploader');
 
 module.exports.Downloader = require('./actions/downloader');
+
+module.exports.seed = require('./actions/seed');

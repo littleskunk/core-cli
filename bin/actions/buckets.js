@@ -106,6 +106,55 @@ module.exports.update = function(id, name, storage, transfer) {
   });
 };
 
+module.exports.makePublic = function(id, env) {
+  var publicPush = env.push ? true : false;
+  var publicPull = env.pull ? true : false;
+
+  var client = this._storj.PrivateClient();
+  id = this._storj.getRealBucketId(id);
+
+  var _finish = function(permissions, bucketKey) {
+    client.updateBucketById(id, {
+      publicPermissions: permissions,
+      encryptionKey: bucketKey
+    }, function(err, bucket) {
+      if (err) {
+        return log('error', err.message);
+      }
+      var updatedPull = bucket.publicPermissions.includes('PULL');
+      var updatedPush = bucket.publicPermissions.includes('PUSH');
+      var key = bucket.encryptionKey.length === 0 ? null : bucket.encryptionKey;
+      log(
+        'info',
+        'ID: %s, Name: %s, Public Pull: %s, Public Push: %s, Key: %s',
+        [bucket.id, bucket.name, updatedPull, updatedPush, key]
+      );
+    });
+  };
+
+  var permissions = [];
+  if (publicPull) {
+    permissions.push('PULL');
+  }
+  if (publicPush) {
+    permissions.push('PUSH');
+  }
+
+  if (permissions.length === 0) {
+    return _finish([], '');
+  }
+
+  var keypass = this._storj.getKeyPass();
+  utils.getKeyRing(keypass, function(keyring) {
+    var bucketKey = keyring.generateBucketKey(id);
+    if (bucketKey === null) {
+      return log('error', 'You must generate a deterministic seed');
+    }
+    _finish(permissions, bucketKey);
+  });
+
+};
+
 module.exports.createtoken = function(bucket, operation) {
   var client = this._storj.PrivateClient();
   bucket = this._storj.getRealBucketId(bucket);

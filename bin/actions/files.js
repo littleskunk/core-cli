@@ -1,9 +1,6 @@
 'use strict';
 var log = require('./../logger')().log;
 var utils = require('./../utils');
-var fs = require('fs');
-var path = require('path');
-var through = require('through');
 var storj = require('storj-lib');
 var async = require('async');
 var Whitelist = require('storj-lib/lib/bridge-client/whitelist');
@@ -48,9 +45,9 @@ module.exports.getInfo = function(bucketid, fileid) {
    fileid = this._storj.getRealFileId(bucketid, fileid);
 
   client.getFileInfo(bucketid, fileid, function(err, file) {
-     if (err) {
-       return log('error', err.message);
-     }
+    if (err) {
+      return log('error', err.message);
+    }
 
     log(
       'info',
@@ -60,11 +57,46 @@ module.exports.getInfo = function(bucketid, fileid) {
   });
 };
 
+module.exports.listMirrors = function(bucketid, fileid) {
+   var client = this._storj.PrivateClient();
+   bucketid = this._storj.getRealBucketId(bucketid);
+   fileid = this._storj.getRealFileId(bucketid, fileid);
+
+  client.listMirrorsForFile(bucketid, fileid, function(err, mirrors) {
+    if (err) {
+      return log('error', err.message);
+    }
+
+    mirrors.forEach((s, i) => {
+      log('info', '');
+      log('info', 'Established');
+      log('info', '-----------');
+      log('info', 'Shard: %s', [i]);
+      s.established.forEach((s, i) => {
+        if (i === 0) {
+          log('info', 'Hash: %s', [s.shardHash]);
+        }
+        log('info', '    %s', [storj.utils.getContactURL(s.contact)]);
+      });
+      log('info', '');
+      log('info', 'Available');
+      log('info', '---------');
+      log('info', 'Shard: %s', [i]);
+      s.available.forEach((s, i) => {
+        if (i === 0) {
+          log('info', 'Hash: %s', [s.shardHash]);
+        }
+        log('info', '    %s', [storj.utils.getContactURL(s.contact)]);
+      });
+    });
+  });
+};
+
 module.exports.remove = function(id, fileId, env) {
   var client = this._storj.PrivateClient();
   var keypass = this._storj.getKeyPass();
   id = this._storj.getRealBucketId(id);
-  fileid = this._storj.getRealFileId(id, fileid);
+  fileId = this._storj.getRealFileId(id, fileId);
 
   function destroyFile() {
     utils.getKeyRing(keypass, function(keyring) {

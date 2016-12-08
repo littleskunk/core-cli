@@ -45,15 +45,13 @@ program._storj.getURL = function() {
   return program.url || process.env.STORJ_BRIDGE || 'https://api.storj.io';
 };
 
-program._storj.keypath = function() {
-  var keyfile = 'id_ecdsa_(' + url.parse(program._storj.getURL()).hostname +')';
-  return path.join(DATADIR, keyfile);
+program._storj.path = function(prefix) {
+  var file = prefix + url.parse(program._storj.getURL()).hostname +')';
+  return path.join(DATADIR, file);
 };
 
-program._storj.idpath = function() {
-  var idFile = 'id_user_(' + url.parse(program._storj.getURL()).hostname +')';
-  return path.join(DATADIR, idFile);
-};
+program._storj.keypath = program._storj.path('id_ecdsa_(');
+program._storj.idpath = program._storj.path('id_user_(');
 
 program._storj.PrivateClient = function(options) {
   if (typeof options === 'undefined') {
@@ -81,25 +79,30 @@ program._storj.getKeyPass = function() {
 };
 
 program._storj.loadKeyPair = function(){
-  if (!storj.utils.existsSync(program._storj.keypath())) {
+  if (!storj.utils.existsSync(program._storj.keypath)) {
     log('error', 'You have not authenticated, please login.');
     process.exit(1);
   }
 
-  return storj.KeyPair(fs.readFileSync(program._storj.keypath()).toString());
+  return storj.KeyPair(fs.readFileSync(program._storj.keypath).toString());
 };
 
 /**
   * Calculate real bucket id from either bucket name or id
   * @param {String} bucketArg - Bucket name or bucket id
+  * @param {String} [userId] - override your own id
   */
-program._storj.getRealBucketId = function(bucketArg){
-  if (!storj.utils.existsSync(program._storj.idpath())) {
-
+program._storj.getRealBucketId = function(bucketArg, userId){
+  // return bucketArg if we don't have a userId
+  if (!storj.utils.existsSync(program._storj.idpath) && !userId) {
     return bucketArg;
   }
-  var userId = fs.readFileSync(program._storj.idpath()).toString();
-  if(!bucketArg.match(/^[0-9a-f]{24}$/i) || program.byname){
+  // retrieve our own id if one was not passed in
+  if (!userId) {
+    userId = fs.readFileSync(program._storj.idpath).toString();
+  }
+  // translate to name if argument doesn't match id or resolution is forced
+  if (!bucketArg.match(/^[0-9a-f]{24}$/i) || program.byname) {
     return storj.utils.calculateBucketId(userId, bucketArg);
   }
   return bucketArg;
@@ -127,10 +130,10 @@ var ACTIONS = {
     program.help();
   },
   upload: function(bucket, filepath, env) {
-    bucket = program._storj.getRealBucketId(bucket);
+    bucket = program._storj.getRealBucketId(bucket, env.user);
     var options = {
-      bucket: bucket,
       filepath: filepath,
+      keypass: program._storj.getKeyPass(),
       env: env
     };
     var uploader;
@@ -138,7 +141,7 @@ var ACTIONS = {
     try {
       uploader = new actions.Uploader(
         program._storj.PrivateClient,
-        program._storj.getKeyPass,
+        bucket,
         options
       );
     } catch(err) {
@@ -153,12 +156,11 @@ var ACTIONS = {
     });
   },
   download: function(bucket, id, filepath, env) {
-    bucket = program._storj.getRealBucketId(bucket);
+    bucket = program._storj.getRealBucketId(bucket, env.user);
     id = program._storj.getRealFileId(bucket, id);
     var options = {
-      bucket: bucket,
-      fileid: id,
       filepath: filepath,
+      keypass: program._storj.getKeyPass(),
       env: env
     };
     var downloader;
@@ -166,7 +168,8 @@ var ACTIONS = {
     try {
       downloader = new actions.Downloader(
         program._storj.PrivateClient,
-        program._storj.getKeyPass,
+        id,
+        bucket,
         options
       );
     } catch(err) {
@@ -250,6 +253,14 @@ program
   .action(actions.buckets.update.bind(program));
 
 program
+  .command('make-public <bucket-id>')
+  .option('--pull', 'make PULL operations public')
+  .option('--push', 'make PUSH operations public')
+  .description('makes a specific storage bucket public, ' +
+    'uploading bucket key to bridge')
+  .action(actions.buckets.makePublic.bind(program));
+
+program
   .command('add-frame')
   .description('creates a new file staging frame')
   .action(actions.frames.add.bind(program));
@@ -291,22 +302,22 @@ program
   .action(actions.files.list.bind(program));
 
 program
+  .command('list-mirrors <bucket-id> <file-id>')
+  .description('list the mirrors for a given file')
+  .action(actions.files.listMirrors.bind(program));
+
+program
   .command('remove-file <bucket-id> <file-id>')
   .option('-f, --force', 'skip confirmation prompt')
   .description('delete a file pointer from a specific bucket')
   .action(actions.files.remove.bind(program));
 
 program
-  .command('upload-file <bucket-id> <filepath>')
+  .command('upload-file <bucket-id> <file-glob>')
   .option('-c, --concurrency <count>', 'max shard upload concurrency')
   .option('-C, --fileconcurrency <count>', 'max file upload concurrency', 1)
-  .option('-r, --redundancy <mirrors>', 'number of mirrors to create for file')
-  .description('upload a file or files to the network and track in a bucket.' +
-               '\n  upload all files in a single directory using "/path/*"\n' +
-               '  or upload recursively using "/path/**/*".\n' +
-               '  <filepath> can be a path with wildcard or a space separated' +
-               ' list of files.'
-             )
+  .option('-u, --user <user>', 'user id for public name resolution', null)
+  .description('upload a file or files to the network and track in a bucket')
   .action(ACTIONS.upload);
 
 program
@@ -318,6 +329,7 @@ program
 program
   .command('download-file <bucket-id> <file-id> <filepath>')
   .option('-x, --exclude <nodeID,nodeID...>', 'mirrors to create for file', '')
+  .option('-u, --user <user>', 'user id for public name resolution', null)
   .description('download a file from the network with a pointer from a bucket')
   .action(ACTIONS.download);
 
@@ -390,9 +402,29 @@ program
 
 program
   .command('test <bucket-id>')
-  .option('-c, --concurrency <count>', 'max pointer concurrency')
   .description('get pointers metadata for all files in a bucket')
   .action(actions.files.getallpointers.bind(program));
+
+program
+  .command('generate-seed')
+  .description('generates new deterministic seed')
+  .action(actions.seed.generateSeed.bind(program));
+
+program
+  .command('print-seed')
+  .description('prints the human readable deterministic seed')
+  .action(actions.seed.printSeed.bind(program));
+
+program
+  .command('import-seed')
+  .description('imports deterministic seed from another device')
+  .action(actions.seed.importSeed.bind(program));
+
+program
+  .command('delete-seed')
+  .description('deletes the deterministic seed from the keyring')
+  .action(actions.seed.deleteSeed.bind(program));
+
 
 program
   .command('*')

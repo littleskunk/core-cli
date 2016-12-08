@@ -19,16 +19,16 @@ var through = require('through');
  * @param {String} options.env.exclude - Nodes to exclude when downloading.
  * @param {String} options.filepath - Path of files being uploaded.
  */
-function Downloader(client, keypass, options) {
+function Downloader(client, fileid, bucketid, options) {
   if (!(this instanceof Downloader)) {
-    return new Downloader(client, keypass, options);
+    return new Downloader(client, fileid, bucketid, options);
   }
 
-  this.bucket = options.bucket;
-  this.fileid = options.fileid;
+  this.bucket = bucketid;
+  this.fileid = fileid;
   this.filepath = options.filepath;
   this.client = client();
-  this.keypass = keypass();
+  this.keypass = options.keypass;
   this.fileMeta = null;
   this.exclude = options.env.exclude;
 
@@ -41,26 +41,21 @@ function Downloader(client, keypass, options) {
  */
 Downloader.prototype._validate = function() {
   // Don't overwrite a file that already exists
+  // Make sure if the path ends with the folder, that folder exists
   if (storj.utils.existsSync(this.filepath)) {
     assert(
       !fs.statSync(this.filepath).isFile(),
       'Refusing to overwrite file at ' + this.filepath
     );
+  } else if (this.filepath.slice(-1) === path.sep) {
+    throw new Error(this.filepath + ' is not an existing folder');
   }
 
   // Make sure the subdirectory exists
   assert(
     storj.utils.existsSync(path.dirname(this.filepath)),
-     path.dirname(this.filepath) + ' is not an existing folder'
-   );
-
-  // If the path ends with a directory make sure it exists
-  if (this.filepath.slice(-1) === path.sep) {
-    assert(
-      fs.statSync(this.filepath).isDirectory(),
-      this.filepath + 'is not an existing folder'
-    );
-  }
+      path.dirname(this.filepath) + ' is not an existing folder'
+  );
 };
 
 /**
@@ -109,27 +104,31 @@ Downloader.prototype._determineSaveLocation = function(callback) {
     );
   }
 
+  // If _validate has successfully passed by this point, we know the following:
+  //  * The parent directory of this.filepath exists
+  //  * If this.filepath is a file, this file does not yet exist
+  //  * If this.filepath is a directory, this directory already exists
+
+  // If the filepath already exists, it must be a directory
+  // Otherwise, it must be a file
   if (storj.utils.existsSync(this.filepath)) {
-    // Check if given path is a directory
-    if (fs.statSync(this.filepath).isDirectory() && this.file !== null) {
+    // use the file name as the name of the file to be downloaded to
+    var fullpath = path.join(this.filepath,this.fileMeta.filename);
 
-      // use the file name as the name of the file to be downloaded to
-      var fullpath = path.join(this.filepath,this.fileMeta.filename);
-
-      // Make sure fullpath doesn't already exist
-      if (storj.utils.existsSync(fullpath)) {
-        return log('error', 'Refusing to overwrite file at %s', fullpath);
-      }
-
-      this.destination = fullpath;
-    } else {
-      this.destination = this.filepath;
+    // Make sure fullpath doesn't already exist
+    if (storj.utils.existsSync(fullpath)) {
+      return callback(
+        new Error(
+          'Refusing to overwrite file at ' + fullpath
+        )
+      );
     }
-  } else if (this.filepath.slice(-1) === path.sep) {
-    return callback(new Error(this.filepath + ' is not an existing folder'));
+
+    this.destination = fullpath;
   } else {
     this.destination = this.filepath;
   }
+
   return callback(null);
 };
 
@@ -177,10 +176,18 @@ Downloader.prototype._createFileStream = function(callback) {
 Downloader.prototype._handleFileStream = function(stream, callback) {
   var self = this;
   var received = 0;
-  var secret = this.keyring.get(this.fileid);
+  var secret;
+
+  if (stream.encryptionKey) {
+    var fileKey = storj.DeterministicKeyIv.getDeterministicKey(
+      stream.encryptionKey, self.fileid);
+    secret = new storj.DeterministicKeyIv(fileKey, self.fileid);
+  } else {
+    secret = this.keyring.get(this.fileid, this.bucket);
+  }
 
   if (!secret) {
-    return log('error', 'No decryption key found in key ring!');
+    return callback(new Error('No decryption key found in key ring!'));
   }
 
   var decrypter = new storj.DecryptStream(secret);
@@ -193,12 +200,13 @@ Downloader.prototype._handleFileStream = function(stream, callback) {
       }
 
       if (!err.pointer) {
-        return;
+        return callback(new Error('Failed to download file'));
       }
 
       log('info', 'Retrying download from other mirrors...');
       var exclude = self.exclude.split(',');
       exclude.push(err.pointer.farmer.nodeID);
+      self.exclude = exclude.join(',');
       self.start(self.finalCallback);
     });
   }).pipe(through(function(chunk) {

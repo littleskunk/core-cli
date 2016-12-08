@@ -17,29 +17,27 @@ var monitor = require('os-monitor');
  * @param {String} keypass - Password for unlocking keyring.
  * @param {Number} options.env.concurrency - shard upload concurrency.
  * @param {Number} options.env.fileconcurrency - File upload concurrency.
- * @param {Number} options.env.redundancy - Number of mirrors per shard.
  * @param {String} options.bucket - Bucket files are uploaded to.
  * @param {String} options.filepath - Path of files being uploaded.
  */
   /* jshint maxstatements: 20 */
-function Uploader(client, keypass, options) {
+function Uploader(client, bucket, options) {
   if (!(this instanceof Uploader)) {
-    return new Uploader(client, keypass, options);
+    return new Uploader(client, bucket, options);
   }
 
   this.shardConcurrency = options.env.concurrency ?
                     parseInt(options.env.concurrency) :
                     3;
   this.fileConcurrency = options.env.fileconcurrency || 1;
-  this.bucket = options.bucket;
-  this.redundancy = options.env.redundancy || 0;
+  this.bucket = bucket;
   this.client = client(
     {
       transferConcurrency: this.shardConcurrency,
       requestTimeout: 10000
     }
   );
-  this.keypass = keypass();
+  this.keypass = options.keypass;
   this.filepaths = this._getAllFiles(options.filepath);
   this.fileCount = this.filepaths.length;
   this.uploadedCount = 0;
@@ -64,19 +62,7 @@ Uploader.prototype._validate = function() {
     );
   }
 
-  if (this.redundancy === 0) {
-    log(
-      'warn',
-      'A redundancy of %s means files will not be mirrored!',
-      [ this.redundancy ]
-    );
-  }
-
   assert(this.fileConcurrency >= 1, 'File Concurrency cannot be less than 1');
-  assert(
-    ((parseInt(this.redundancy) <= 12) || (parseInt(this.redundancy) >= 0)),
-    this.redundancy + ' is an invalid Redundancy value.'
-  );
   assert(this.fileCount >= 1, '0 files specified to be uploaded.');
 };
 
@@ -100,7 +86,17 @@ Uploader.prototype._getAllFiles = function(filepath) {
       throw new Error(file + ' could not be found');
     }
 
-    if (fs.statSync(parsedFileArray[0]).isFile() === true) {
+    var stat = fs.statSync(parsedFileArray[0]);
+
+    if (stat.size < 1) {
+      log(
+        'warn',
+        'Skipping [ %s ]... we don\'t support files smaller than 1 Byte.',
+        [ parsedFileArray[0] ]
+      );
+    }
+
+    if (stat.isFile() === true && stat.size > 0) {
       try {
         fs.accessSync(parsedFileArray[0], fs.R_OK);
       } catch (err) {
@@ -169,54 +165,38 @@ Uploader.prototype._loopThroughFiles = function(callback) {
  * check if a given file already exists in bucket 
  * @private 
  */
-Uploader.prototype._checkFileExistance = function(filepath, callback) {
+Uploader.prototype._checkFileExistence = function(filepath, callback) {
   var self = this;
   var filename = path.basename(filepath);
   var fileId = storj.utils.calculateFileId(self.bucket, filename);
   var retry = 0;
 
-  function _getFileInfo() {
-    log(
-      'info',
-      '[ %s ] Getting file info... (retry: %s)',
-      [ filename, retry ]
-    );
-      
-    self.client.getFileInfo(self.bucket, fileId, function(err, fileInfo){
-      if (err && err.message.indexOf('File not found') === -1 ) {
-        
-        if (retry < 6) {
-          retry++;
-          return _getFileInfo();
-        }
-        
-        return err;
-      }
-    
-      if(fileInfo){
-        var date = (new Date().toISOString()).replace(/:/g, ';');
-        var newFilename = '(' + date + ')-' + filename;
-        log(
-          'warn',
-          '[ %s ] Already exists in bucket. Uploading to ' + newFilename,
-          filename
-        );
-        return callback(null, newFilename, filepath);
-      }
-      return callback(null, filename, filepath);
-    });
-  }
-  
-  return _getFileInfo();
-}; 
+  self.client.getFileInfo(self.bucket, fileId, function(err, fileInfo){
+    if (fileInfo) {
+      var date = (new Date().toISOString()).replace(/:/g, ';');
+      var newFilename = '(' + date + ')-' + filename;
+      log(
+        'warn',
+        '[ %s ] Already exists in bucket. Uploading to ' + newFilename,
+        filename
+       );
+      self.filename = newFilename;
+      return callback(null, filepath);
+    }
+    self.filename = filename;
+    callback(null, filepath);
+  });
+};
 
 /**
  * Create temp dir for storing encrypted versions of files to be uploaded.
  * @param {String} filepath - file to be uploaded
  * @private
  */
-Uploader.prototype._makeTempDir = function(filename, filepath, callback) {
+Uploader.prototype._makeTempDir = function(filepath, callback) {
   var self = this;
+  var filename = self.filename;
+  var token = self.token;
 
   utils.makeTempDir(function(err, tmpDir, tmpCleanup) {
     if (err) {
@@ -227,7 +207,18 @@ Uploader.prototype._makeTempDir = function(filename, filepath, callback) {
 
     log('info', 'Encrypting file "%s"', [filepath]);
 
-    var secret = new storj.DataCipherKeyIv();
+    var fileId = storj.utils.calculateFileId(self.bucket, filename);
+    var secret;
+
+    if (token.encryptionKey) {
+      // generate file key based on public encryptionKey
+      var fileKey = storj.DeterministicKeyIv.getDeterministicKey(
+        token.encryptionKey, fileId);
+      secret = new storj.DeterministicKeyIv(fileKey, fileId);
+    } else {
+      // generate file key based on private
+      secret = self.keyring.generateFileKey(self.bucket, fileId);
+    }
 
     self.fileMeta[filepath] = {
       filename: filename,
@@ -273,7 +264,7 @@ Uploader.prototype._createReadStream = function(filepath, callback) {
  */
 Uploader.prototype._createToken = function(filepath, callback) {
   var self = this;
-  var filename = self.fileMeta[filepath].filename;
+  var filename = self.filename;
   var retry = 0;
 
   function _createToken() {
@@ -294,8 +285,8 @@ Uploader.prototype._createToken = function(filepath, callback) {
         callback(err, filepath);
         return;
       }
-
-      callback(null, filepath, token);
+      self.token = token;
+      callback(null, filepath);
     });
   }
 
@@ -308,9 +299,10 @@ Uploader.prototype._createToken = function(filepath, callback) {
  * @private
  */
  /* jshint maxstatements: 20 */
-Uploader.prototype._storeFileInBucket = function(filepath, token, callback) {
+Uploader.prototype._storeFileInBucket = function(filepath, callback) {
   var self = this;
   var filename = self.fileMeta[filepath].filename;
+  var token = self.token;
 
   log('info', '[ %s ] Storing file, hang tight!', filename);
 
@@ -341,10 +333,6 @@ Uploader.prototype._storeFileInBucket = function(filepath, token, callback) {
         [file.filename, file.mimetype, file.size, file.id]
       );
 
-      if (self.redundancy && self.redundancy > 0) {
-        self._mirror(file.id);
-      }
-
       self.uploadedCount++;
 
       log(
@@ -360,32 +348,6 @@ Uploader.prototype._storeFileInBucket = function(filepath, token, callback) {
       }
 
       self.nextFileCallback[filepath]();
-
-    }
-  );
-};
-
-/**
- * Mirror files
- * @param {String} fileid - id of file to be mirrored
- * @private
- */
-Uploader.prototype._mirror = function(fileid) {
-  this.client.replicateFileFromBucket(
-    this.bucket,
-    fileid,
-    parseInt(this.redundancy),
-    function(err, replicas) {
-      if (err) {
-        return log('error', err.message);
-      }
-
-      replicas.forEach(function(shard, i) {
-        log('info', 'Shard %s establishing mirrors to %s nodes', [
-          i,
-          shard.length
-        ]);
-      });
 
     }
   );
@@ -434,20 +396,20 @@ Uploader.prototype.start = function(finalCallback) {
     function _beginLoop(callback) {
       self._loopThroughFiles(callback);
     },
-    function _checkFileExistance(filepath, callback) {
-      self._checkFileExistance(filepath, callback);
-    },
-    function _makeTempDir(filename, filepath, callback) {
-      self._makeTempDir(filename, filepath, callback);
-    },
-    function _createReadStream(filepath, callback) {
-      self._createReadStream(filepath, callback);
+    function _checkFileExistence(filepath, callback) {
+      self._checkFileExistence(filepath, callback);
     },
     function _createToken(filepath, callback) {
       self._createToken(filepath, callback);
     },
-    function _storeFileInBucket(filepath, token, callback) {
-      self._storeFileInBucket(filepath, token, callback);
+    function _makeTempDir(filepath, callback) {
+      self._makeTempDir(filepath, callback);
+    },
+    function _createReadStream(filepath, callback) {
+      self._createReadStream(filepath, callback);
+    },
+    function _storeFileInBucket(filepath, callback) {
+      self._storeFileInBucket(filepath, callback);
     }
   ], function (err, filepath) {
     self._handleFailure();

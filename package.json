@@ -1,11 +1,17 @@
 {
   "name": "storj-cli",
-  "version": "2.0.0",
-  "description": "implementation of the storj protocol for node.js and the browser",
+  "version": "3.1.0",
+  "description": "access your data on the storj network via command line",
   "main": "bin/index.js",
   "directories": {
     "test": "test",
     "bin": "bin"
+  },
+  "scripts": {
+    "test": "npm run testsuite && npm run linter",
+    "testsuite": "./node_modules/.bin/mocha test/**/*.js",
+    "coverage": "./node_modules/.bin/istanbul cover ./node_modules/.bin/_mocha -- --recursive",
+    "linter": "./node_modules/.bin/jshint --config .jshintrc ./bin ./test"
   },
   "bin": {
     "storj": "bin/storj.js"
@@ -29,12 +35,11 @@
       "url": "https://github.com/littleskunk"
     }
   ],
-  "license": "(LGPL-3.0)",
+  "license": "LGPL-3.0",
   "engines": {
-    "node": "^4.4.4"
+    "node": "^6.9.1"
   },
   "dependencies": {
-    "storj-lib": "littleskunk/core#test",
     "async": "^1.5.2",
     "colors": "^1.1.2",
     "commander": "^2.9.0",
@@ -44,8 +49,18 @@
     "os-monitor": "1.0.4",
     "prompt": "^1.0.0",
     "rimraf": "^2.5.3",
+    "storj-lib": "littleskunk/core#test",
     "through": "^2.3.8",
     "tmp": "0.0.28",
     "url": "0.11.0"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "coveralls": "^2.11.15",
+    "istanbul": "^0.4.5",
+    "jshint": "^2.9.4",
+    "mocha": "^3.1.2",
+    "proxyquire": "^1.7.10",
+    "sinon": "^1.17.6"
   }
 }

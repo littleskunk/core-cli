@@ -43,7 +43,7 @@ module.exports.register = function() {
 module.exports.login = function() {
   var self = this;
 
-  if (storj.utils.existsSync(self._storj.keypath())) {
+  if (storj.utils.existsSync(self._storj.keypath)) {
     return log('error', 'This device is already paired.');
   }
 
@@ -62,8 +62,8 @@ module.exports.login = function() {
         return log('error', err.message);
       }
 
-      fs.writeFileSync(self._storj.idpath(), result.email);
-      fs.writeFileSync(self._storj.keypath(), keypair.getPrivateKey());
+      fs.writeFileSync(self._storj.idpath, result.email);
+      fs.writeFileSync(self._storj.keypath, keypair.getPrivateKey());
       log('info', 'This device has been successfully paired.');
     });
   });
@@ -75,17 +75,17 @@ module.exports.logout = function() {
   var keypair = this._storj.loadKeyPair();
 
   client.destroyPublicKey(keypair.getPublicKey(), function(err) {
-    if(storj.utils.existsSync(self._storj.idpath())){
-      fs.unlinkSync(self._storj.idpath());
+    if(storj.utils.existsSync(self._storj.idpath)){
+      fs.unlinkSync(self._storj.idpath);
     }
 
     if (err) {
       log('info', 'This device has been successfully unpaired.');
       log('warn', 'Failed to revoke key, you may need to do it manually.');
       log('warn', 'Reason: ' + err.message);
-      return fs.unlinkSync(self._storj.keypath());
+      return fs.unlinkSync(self._storj.keypath);
     }
-    fs.unlinkSync(self._storj.keypath());
+    fs.unlinkSync(self._storj.keypath);
     log('info', 'This device has been successfully unpaired.');
   });
 };
