@@ -237,8 +237,8 @@ module.exports.getallpointers = function(bucket, env) {
       
       if (err) {
         log('warn', 'Create Token: %s', err.message);
-        error += 1;
-        filelist[file.id]['error'] += 1;
+        error++;
+        filelist[file.id]['error']++;
         fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
         return callback(null);
       }
@@ -255,27 +255,30 @@ module.exports.getallpointers = function(bucket, env) {
       }, function(err, pointers) {
         if (err) {
           log('warn', 'Get Pointer: %s', err.message);
-          error += 1;
-          filelist[file.id]['error'] += 1;
+          error++;
+          filelist[file.id]['error']++;
           fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
           return callback(null);
         }
         
         if (!pointers.length) {
           log('warn', 'There are no pointers to return for that range');
-          error += 1;
+          error++;
           return callback(null);
         }
         
         pointers.forEach(function(location, i) {
-          whitelist.push(location.farmer.nodeID);
-          var counter = whitelist.getValue(location.farmer.nodeID)
-          download += 1;
-          filelist[file.id]['error'] = 0;
-          filelist[file.id]['download'] = counter;
-          filelist[file.id]['farmer'] = location.farmer.nodeID;
-          fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
-          log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
+          if ( whitelist.toObject().indexOf(location.farmer.nodeID) === -1 ) {
+            filelist[file.id]['error'] = 999;
+          } else {
+            whitelist.push(location.farmer.nodeID);
+            var counter = whitelist.getValue(location.farmer.nodeID)
+            download++;
+            filelist[file.id]['error'] = 0;
+            filelist[file.id]['download'] = counter;
+            filelist[file.id]['farmer'] = location.farmer.nodeID;
+            fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
+            log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
         });
         
         return callback(null);
