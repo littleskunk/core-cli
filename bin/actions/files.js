@@ -5,6 +5,7 @@ var storj = require('storj-lib');
 var async = require('async');
 var Whitelist = require('storj-lib/lib/bridge-client/whitelist');
 var os = require('os');
+var fs = require('graceful-fs');
 var platform = os.platform();
 var HOME = platform !== 'win32' ? process.env.HOME : process.env.USERPROFILE;
 
