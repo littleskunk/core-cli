@@ -121,41 +121,6 @@ module.exports.remove = function(id, fileId, env) {
   destroyFile();
 };
 
-module.exports.mirror = function(bucket, file, env) {
-  var client = this._storj.PrivateClient({ requestTimeout: 30000 });
-  bucket = this._storj.getRealBucketId(bucket);
-  file = this._storj.getRealFileId(bucket, file);
-
-  if (parseInt(env.redundancy) > 12 || parseInt(env.redundancy) < 1) {
-    return log('error', '%s is an invalid Redundancy value.', env.redundancy);
-  }
-
-  log(
-    'info',
-    'Establishing %s mirrors per shard for redundancy',
-    [env.redundancy]
-  );
-  client.replicateFileFromBucket(
-    bucket,
-    file,
-    parseInt(env.redundancy),
-    function(err, replicas) {
-      if (err) {
-        return log('error', err.message);
-      }
-
-      replicas.forEach(function(shard, i) {
-        log('info', 'Shard %s establishing mirrors to %s nodes', [
-          i,
-          shard.length
-        ]);
-      });
-
-      process.exit();
-    }
-  );
-};
-
 module.exports.stream = function(bucket, id, env) {
   var self = this;
   var client = this._storj.PrivateClient({

@@ -321,12 +321,6 @@ program
   .action(ACTIONS.upload);
 
 program
-  .command('create-mirrors <bucket-id> <file-id>')
-  .option('-r, --redundancy [mirrors]', 'mirrors to create for file', 3)
-  .description('create redundant mirrors for the given file')
-  .action(actions.files.mirror.bind(program));
-
-program
   .command('download-file <bucket-id> <file-id> <filepath>')
   .option('-x, --exclude <nodeID,nodeID...>', 'mirrors to create for file', '')
   .option('-u, --user <user>', 'user id for public name resolution', null)
