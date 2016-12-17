@@ -277,7 +277,6 @@ module.exports.getallpointers = function(bucket, env) {
             filelist[file.id]['error'] = 0;
             filelist[file.id]['download'] = counter;
             filelist[file.id]['farmer'] = location.farmer.nodeID;
-            fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
             log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
           }
         });
@@ -286,6 +285,7 @@ module.exports.getallpointers = function(bucket, env) {
       });
     });
   }, function(err) {
+    fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
     log('info', 'Downloads: %s Errors: %s Zeit: %s', [download, error, Date.now() - start]);
   });
 };
