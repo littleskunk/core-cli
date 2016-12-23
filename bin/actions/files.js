@@ -3,7 +3,6 @@ var log = require('./../logger')().log;
 var utils = require('./../utils');
 var storj = require('storj-lib');
 var async = require('async');
-var Whitelist = require('storj-lib/lib/bridge-client/whitelist');
 var os = require('os');
 var fs = require('graceful-fs');
 var path = require('path');
@@ -214,78 +213,4 @@ module.exports.getpointers = function(bucket, id, env) {
 };
 
 module.exports.getallpointers = function(bucket, env) {
-  var start = Date.now();
-  var client = this._storj.PrivateClient();
-  
-  var filelist = JSON.parse(fs.readFileSync(path.join(HOME, '.storjcli/.files')));
-  var whitelist = new Whitelist(path.join(HOME, '.storjcli'));
-  
-  var error = 0;
-  var download = 0;
-    
-  async.forEachLimit(filelist, 500, function(file, callback) {
-    
-    if ( file.download >= 50000 || file.error >= 50 || (file.download === 0 && file.error >= 10) ) {
-      if ( file.download === 0 || file.download >= 50000 ) {
-        delete filelist[file.id];
-        fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
-      }
-      return callback(null);
-    }
-    
-    client.createToken(file.bucket, 'PULL', function(err, token) {
-      
-      if (err) {
-        log('warn', 'Create Token: %s', err.message);
-        error++;
-        filelist[file.id]['error']++;
-        fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
-        return callback(null);
-      }
-            
-      var skip = Number(env.skip);
-      var limit = Number(env.limit);
-
-      client.getFilePointers({
-        bucket: file.bucket,
-        file: file.id,
-        token: token.token,
-        skip: skip,
-        limit: limit
-      }, function(err, pointers) {
-        if (err) {
-          log('warn', 'Get Pointer: %s', err.message);
-          error++;
-          filelist[file.id]['error']++;
-          fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
-          return callback(null);
-        }
-        
-        if (!pointers.length) {
-          log('warn', 'There are no pointers to return for that range');
-          error++;
-          return callback(null);
-        }
-        
-        pointers.forEach(function(location, i) {
-          if ( whitelist.toObject().indexOf(location.farmer.nodeID) === -1 ) {
-            filelist[file.id]['error'] = 999;
-          } else {
-            whitelist.push(location.farmer.nodeID);
-            var counter = whitelist.getValue(location.farmer.nodeID)
-            download++;
-            filelist[file.id]['error'] = 0;
-            filelist[file.id]['download'] = counter;
-            filelist[file.id]['farmer'] = location.farmer.nodeID;
-            log('info', 'Farmer: %s Count: %s', [location.farmer.nodeID, counter]);
-          }
-        });
-        
-        return callback(null);
-      });
-    });
-  }, function(err) {
-    fs.writeFileSync(path.join(HOME, '.storjcli/.files'), JSON.stringify(filelist, null, "\t"));
-    log('info', 'Downloads: %s Errors: %s Zeit: %s', [download, error, Date.now() - start]);
-  });
 };
